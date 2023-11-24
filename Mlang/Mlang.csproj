@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="IsExternalInit" Version="1.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Yoakke.SynKit.Lexer.Generator" Version="2023.5.31-2.48.40-nightly" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
+    <PackageReference Include="Yoakke.SynKit.Parser.Generator" Version="2023.5.31-2.48.40-nightly" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
+    <PackageReference Include="Yoakke.SynKit.Lexer" Version="2023.5.31-2.48.40-nightly" />
+    <PackageReference Include="Yoakke.SynKit.Parser" Version="2023.5.31-2.48.40-nightly" />
+    <PackageReference Include="Yoakke.SynKit.Reporting" Version="2023.5.31-2.48.40-nightly" />
+  </ItemGroup>
+
+</Project>
