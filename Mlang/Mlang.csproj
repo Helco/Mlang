@@ -12,6 +12,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Nullable" Version="1.3.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Yoakke.SynKit.Lexer.Generator" Version="2023.5.31-2.48.40-nightly" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
     <PackageReference Include="Yoakke.SynKit.Parser.Generator" Version="2023.5.31-2.48.40-nightly" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
     <PackageReference Include="Yoakke.SynKit.Lexer" Version="2023.5.31-2.48.40-nightly" />
