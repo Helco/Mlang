@@ -14,8 +14,7 @@ internal partial class Parser
 {
     private List<Diagnostic> diagnostics = new();
 
-    // TODO: Add polyfill for required instead of hacking null into this
-    public ISourceFile SourceFile { get; init; } = null!;
+    public required ISourceFile SourceFile { get; init; } = null!;
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
 
 #region Expressions
@@ -52,7 +51,7 @@ internal partial class Parser
     private ASTExpression PrimaryExpressionVar(Tk varIdentifier) =>
         throw new NotImplementedException();
 
-    [Rule("PostfixExpression: PostfixExpression ExprBrL (Expression (Comma Expression)*)? ExprBrR")]
+    [Rule("PostfixExpression: PostfixExpression ExprBrL (Expression (Comma AssignmentExpression)*)? ExprBrR")]
     private ASTExpression PostfixExpressionCall(ASTExpression function, Tk _0, Punctuated<ASTExpression, Tk> parameters, Tk _1) =>
         throw new NotImplementedException();
 
@@ -126,8 +125,8 @@ internal partial class Parser
     private ASTStatement DefaultLabel(Tk _0, Tk _1) =>
         throw new NotImplementedException();
 
-    [Rule("ForLoop: KwFor ExprBrL ForInitStatement Expression Semicolon Expression ExprBrR Statement")]
-    private ASTStatement ForLoop(Tk _0, Tk _1, ASTStatement init, ASTExpression condition, Tk _2, ASTExpression update, Tk _3, ASTStatement body) =>
+    [Rule("ForLoop: KwFor ExprBrL ForInitStatement Expression Semicolon Expression? ExprBrR Statement")]
+    private ASTStatement ForLoop(Tk _0, Tk _1, ASTStatement init, ASTExpression condition, Tk _2, ASTExpression? update, Tk _3, ASTStatement body) =>
         throw new NotImplementedException();
 
     [Rule("WhileLoop: KwWhile ExprBrL Expression ExprBrR Statement")]
@@ -172,7 +171,7 @@ internal partial class Parser
     private (string name, ASTExpression? value) DeclarationWithInitializer(Tk name, ASTExpression? value) =>
         (name.Text, value);
 
-    [Rule("DeclarationInitializer: Assign Expression")]
+    [Rule("DeclarationInitializer: Assign LogicalOrExpression")]
     private ASTExpression DeclarationInitializer(Tk _0, ASTExpression value) => value;
 
     [Rule("SingleFullDeclaration: Type Identifier DeclarationInitializer?")]
@@ -220,11 +219,11 @@ internal partial class Parser
         throw new NotImplementedException();
 
     [Rule("PipelineDeclaration: KwBlend BlendFormula BlendFormula? Semicolon")]
-    private ASTNode PipelineDeclarationBlend(Tk _0, BlendFormula color, BlendFormula? alpha, Tk _1) =>
+    private ASTNode PipelineDeclarationBlend(Tk _0, Model.BlendFormula color, Model.BlendFormula? alpha, Tk _1) =>
         throw new NotImplementedException();
 
     [Rule("BlendFormula: Identifier ( Add | Subtract | BitNegate | Lesser | Greater ) Identifier")]
-    private BlendFormula BlendFormula(Tk sourceFactor, Tk function, Tk destinationFactor) =>
+    private Model.BlendFormula BlendFormula(Tk sourceFactor, Tk function, Tk destinationFactor) =>
         throw new NotImplementedException();
 
     [Rule("PipelineBlock: KwPipeline BlockCondition? PipelineDeclaration")]
