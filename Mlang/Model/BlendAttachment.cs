@@ -34,6 +34,9 @@ public readonly record struct BlendFormula(
 );
 
 public readonly record struct BlendAttachment(
-    BlendFormula Color,
+    BlendFormula? Color,
     BlendFormula? Alpha
-);
+)
+{
+    public static readonly BlendAttachment NoBlend = default;
+}
