@@ -379,17 +379,18 @@ internal partial class Parser
     [Rule("StorageBlockKind: KwAttributes | KwInstances | KwUniform | KwVarying")]
     private Tk StorageBlockKind(Tk kind) => kind;
 
-    [Rule("PipelineDeclaration: Identifier ( Identifier | UnsignedInteger | UnsignedReal )? Semicolon")]
-    private PartialPipelineState PipelineDeclarationSingleOrNone(Tk key, Tk? value, Tk _0) =>
-        throw new NotImplementedException();
+    [Rule("PipelineDeclaration: Identifier ( Identifier | UnsignedInteger | UnsignedReal | Assign | Ampersand | Equals | NotEquals | Lesser | Greater | LessOrEquals | GreaterOrEquals )? Semicolon")]
+    private PartialPipelineState PipelineDeclarationSingleOrNone(Tk key, Tk? value, Tk _0) => value == null
+        ? ParsePipelineFactDeclaration(key)
+        : ParsePipelineValueDeclaration(key, value);
 
     [Rule("PipelineDeclaration: Identifier AnyNumber AnyNumber AnyNumber AnyNumber Semicolon")]
-    private PartialPipelineState PipelineDeclarationVector(Tk key, double x, double y, double z, double w, Tk _0) =>
-        throw new NotImplementedException();
+    private PartialPipelineState PipelineDeclarationVector(Tk key, float x, float y, float z, float w, Tk _0) =>
+        ParsePipelineVectorDeclaration(key, x, y, z, w);
 
     [Rule("AnyNumber: Subtract? (UnsignedInteger | UnsignedReal)")]
-    private double AnyNumber(Tk? minus, Tk unsigned) =>
-        (minus == null ? 1.0 : -1.0) * double.Parse(unsigned.Text);
+    private float AnyNumber(Tk? minus, Tk unsigned) =>
+        (minus == null ? 1.0f : -1.0f) * float.Parse(unsigned.Text);
 
     [Rule("PipelineDeclaration: KwBlend BlendFormula BlendFormula? Semicolon")]
     private PartialPipelineState PipelineDeclarationBlend(Tk _0, BlendFormula color, BlendFormula? alpha, Tk _1) => new PartialPipelineState()
@@ -399,8 +400,8 @@ internal partial class Parser
 
     [Rule("BlendFormula: Identifier ( Identifier | Add | Subtract | BitNegate | Lesser | Greater ) Identifier")]
     private BlendFormula BlendFormula(Tk sourceFactor, Tk function, Tk destinationFactor) => new(
-        ParseBlendFactor(sourceFactor),
-        ParseBlendFactor(destinationFactor),
+        ParseEnum<BlendFactor>(sourceFactor, Mlang.Diagnostics.DiagUnknownBlendFactor),
+        ParseEnum<BlendFactor>(destinationFactor, Mlang.Diagnostics.DiagUnknownBlendFactor),
         ParseBlendFunction(function)
     );
 
