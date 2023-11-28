@@ -56,7 +56,7 @@ internal abstract class ASTGlobalBlock : ASTNode
 {
 }
 
-internal abstract class ASTConditionalGlobalBLock : ASTGlobalBlock
+internal abstract class ASTConditionalGlobalBlock : ASTGlobalBlock
 {
     public required ASTExpression? Condition { get; init; }
 }

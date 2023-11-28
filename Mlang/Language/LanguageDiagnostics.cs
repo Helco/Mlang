@@ -6,6 +6,7 @@ using Yoakke.SynKit.Parser;
 using Yoakke.SynKit.Reporting.Present;
 using Yoakke.SynKit.Text;
 using TextRange = Yoakke.SynKit.Text.Range;
+using Tk = Yoakke.SynKit.Lexer.IToken<Mlang.Language.TokenKind>;
 
 namespace Mlang;
 
@@ -15,7 +16,7 @@ partial class Diagnostics
 
     internal static readonly DiagnosticType TypeLexer = CategoryLanguage.Error("Found invalid token");
     internal static Diagnostic DiagLexer(ISourceFile source, IToken<TokenKind> token) =>
-        TypeLexer.Create(sourceInfos: new[] { new Location(source, token.Range) });
+        TypeLexer.Create(sourceInfos: [new(source, token.Range)]);
 
     internal static readonly DiagnosticType TypeParser = CategoryLanguage.CreateWithFootNote(
         Severity.Error, "Could not parse {0} at this point", "{1}");
@@ -30,5 +31,17 @@ partial class Diagnostics
         Severity.Error, "An option needs at least two values");
 
     internal static Diagnostic DiagTooFewOptions(ISourceFile source, TextRange range) =>
-        TypeTooFewOptions.Create(sourceInfos: [new Location(source, range)]);
+        TypeTooFewOptions.Create(sourceInfos: [new(source, range)]);
+
+    internal static readonly DiagnosticType TypeUnknownBlendFactor = CategoryLanguage.Create(
+        Severity.Error, "Unknown blend factor: {0}");
+
+    internal static Diagnostic DiagUnknownBlendFactor(ISourceFile source, Tk token) =>
+        TypeUnknownBlendFactor.Create([token.Text], [new(source, token.Range)]);
+
+    internal static readonly DiagnosticType TypeUnknownBlendFunction = CategoryLanguage.Create(
+        Severity.Error, "Unknown blend function: {0}");
+    
+    internal static Diagnostic DiagUnknownBlendFunction(ISourceFile source, TextRange range, string token) =>
+        TypeUnknownBlendFunction.Create([token], [new(source, range)]);
 }

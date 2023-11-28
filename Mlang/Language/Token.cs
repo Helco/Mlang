@@ -153,7 +153,7 @@ internal enum TokenKind
     [Regex(Regexes.Identifier)] Identifier,
     [Regex(Regexes.HexLiteral)]
     [Regex(Regexes.IntLiteral)] UnsignedInteger,
-    [Regex(Regexes.RealNumberLiteral + "f")] UnsignedReal,
+    [Regex(Regexes.RealNumberLiteral + "f?")] UnsignedReal,
 }
 
 [Lexer(typeof(TokenKind))]

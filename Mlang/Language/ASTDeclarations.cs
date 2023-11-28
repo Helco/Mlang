@@ -144,7 +144,7 @@ internal class ASTFunction : ASTGlobalBlock
     }
 }
 
-internal class ASTStorageBlock : ASTConditionalGlobalBLock
+internal class ASTStorageBlock : ASTConditionalGlobalBlock
 {
     public required TokenKind StorageKind { get; init; }
     public required ASTDeclaration[] Declarations { get; init; }
@@ -185,7 +185,7 @@ internal class ASTStorageBlock : ASTConditionalGlobalBLock
     }
 }
 
-internal class ASTStageBlock : ASTConditionalGlobalBLock
+internal class ASTStageBlock : ASTConditionalGlobalBlock
 {
     public required TokenKind Stage { get; init; }
     public required ASTFunction[] Functions { get; init; }
@@ -194,6 +194,7 @@ internal class ASTStageBlock : ASTConditionalGlobalBLock
     public override void Visit(IASTVisitor visitor)
     {
         visitor.Visit(this);
+        Condition?.Visit(visitor);
         foreach (var func in Functions)
             func.Visit(visitor);
         foreach (var stmt in Statements)
@@ -225,4 +226,31 @@ internal class ASTStageBlock : ASTConditionalGlobalBLock
     }
 }
 
+internal class ASTPipelineBlock : ASTConditionalGlobalBlock
+{
+    public required PartialPipelineState State { get; init; }
 
+    public override void Visit(IASTVisitor visitor)
+    {
+        visitor.Visit(this);
+        Condition?.Visit(visitor);
+    }
+
+    public override void Write(CodeWriter writer)
+    {
+        if (Condition == null)
+            writer.WriteLine("pipeline");
+        else
+        {
+            writer.Write("pipeline if (");
+            Condition.Write(writer);
+            writer.WriteLine(")");
+        }
+
+        writer.WriteLine("{");
+        using var indented = writer.Indented;
+        // TODO: Implement this
+        indented.WriteLine("// Writing pipeline states is not yet implemented");
+        writer.WriteLine("}");
+    }
+}

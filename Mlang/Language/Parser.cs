@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Mlang.Model;
-using Yoakke.SynKit.Lexer;
 using Yoakke.SynKit.Parser;
 using Yoakke.SynKit.Parser.Attributes;
 using Yoakke.SynKit.Text;
@@ -381,24 +380,51 @@ internal partial class Parser
     private Tk StorageBlockKind(Tk kind) => kind;
 
     [Rule("PipelineDeclaration: Identifier ( Identifier | UnsignedInteger | UnsignedReal )? Semicolon")]
-    private ASTNode PipelineDeclarationSingleOrNone(Tk key, Tk? value, Tk _0) =>
+    private PartialPipelineState PipelineDeclarationSingleOrNone(Tk key, Tk? value, Tk _0) =>
         throw new NotImplementedException();
+
+    [Rule("PipelineDeclaration: Identifier AnyNumber AnyNumber AnyNumber AnyNumber Semicolon")]
+    private PartialPipelineState PipelineDeclarationVector(Tk key, double x, double y, double z, double w, Tk _0) =>
+        throw new NotImplementedException();
+
+    [Rule("AnyNumber: Subtract? (UnsignedInteger | UnsignedReal)")]
+    private double AnyNumber(Tk? minus, Tk unsigned) =>
+        (minus == null ? 1.0 : -1.0) * double.Parse(unsigned.Text);
 
     [Rule("PipelineDeclaration: KwBlend BlendFormula BlendFormula? Semicolon")]
-    private ASTNode PipelineDeclarationBlend(Tk _0, Model.BlendFormula color, Model.BlendFormula? alpha, Tk _1) =>
-        throw new NotImplementedException();
+    private PartialPipelineState PipelineDeclarationBlend(Tk _0, BlendFormula color, BlendFormula? alpha, Tk _1) => new PartialPipelineState()
+    {
+        BlendAttachments = [new(color, alpha)]
+    };
 
-    [Rule("BlendFormula: Identifier ( Add | Subtract | BitNegate | Lesser | Greater ) Identifier")]
-    private Model.BlendFormula BlendFormula(Tk sourceFactor, Tk function, Tk destinationFactor) =>
-        throw new NotImplementedException();
+    [Rule("BlendFormula: Identifier ( Identifier | Add | Subtract | BitNegate | Lesser | Greater ) Identifier")]
+    private BlendFormula BlendFormula(Tk sourceFactor, Tk function, Tk destinationFactor) => new(
+        ParseBlendFactor(sourceFactor),
+        ParseBlendFactor(destinationFactor),
+        ParseBlendFunction(function)
+    );
 
     [Rule("PipelineBlock: KwPipeline BlockCondition? PipelineDeclaration")]
-    private ASTGlobalBlock PipelineBlock(Tk _0, ASTExpression? condition, ASTNode declaration) =>
-        throw new NotImplementedException();
+    private ASTGlobalBlock PipelineBlock(Tk _0, ASTExpression? condition, PartialPipelineState declaration) => new ASTPipelineBlock()
+    {
+        Range = _0.Range,
+        Condition = condition,
+        State = declaration
+    };
 
     [Rule("PipelineBlock: KwPipeline BlockCondition? ScopeBrL PipelineDeclaration* ScopeBrR")]
-    private ASTGlobalBlock PipelineBlock(Tk _0, ASTExpression? condition, Tk _1, IReadOnlyList<ASTNode> declarations, Tk _2) =>
-        throw new NotImplementedException();
+    private ASTGlobalBlock PipelineBlock(Tk _0, ASTExpression? condition, Tk _1, IReadOnlyList<PartialPipelineState> declarations, Tk _2)
+    {
+        var state = new PartialPipelineState();
+        foreach (var decl in declarations)
+            state.With(decl);
+        return new ASTPipelineBlock()
+        {
+            Range = _0.Range,
+            Condition = condition,
+            State = state
+        };
+    }
 
     [Rule("StageBlock: ( KwVertex | KwFragment ) BlockCondition? ScopeBrL StageItem* ScopeBrR")]
     private ASTGlobalBlock StageBlock(Tk kind, ASTExpression? condition, Tk _0, IReadOnlyList<ASTNode> items, Tk _1) => new ASTStageBlock()

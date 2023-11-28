@@ -10,6 +10,14 @@ internal struct PartialStencilState
     public StencilOperation? Pass;
     public StencilOperation? Fail;
     public StencilOperation? DepthFail;
+
+    public PartialStencilState With(PartialStencilState state) => new()
+    {
+        Comparison = state.Comparison ?? Comparison,
+        Pass = state.Pass ?? Pass,
+        Fail = state.Fail ?? Fail,
+        DepthFail = state.DepthFail ?? DepthFail
+    };
 }
 
 internal class PartialPipelineState
@@ -35,6 +43,31 @@ internal class PartialPipelineState
     public bool? ScissorTest;
 
     public PrimitiveTopology? PrimitiveTopology;
+
+    public void With(PartialPipelineState state)
+    {
+        CoverageToAlpha = state.CoverageToAlpha ?? CoverageToAlpha;
+        BlendFactor = state.BlendFactor ?? BlendFactor;
+        BlendAttachments = BlendAttachments.Concat(state.BlendAttachments).ToArray();
+
+        DepthTest = state.DepthTest ?? DepthTest;
+        DepthWrite = state.DepthWrite ?? DepthWrite;
+        StencilTest = state.StencilTest ?? StencilTest;
+        StencilReadMask = state.StencilReadMask ?? StencilReadMask;
+        StencilWriteMask = state.StencilWriteMask ?? StencilWriteMask;
+        StencilReference = state.StencilReference ?? StencilReference;
+        Stencil = Stencil.With(state.Stencil);
+        StencilFront = StencilFront.With(state.StencilFront);
+        StencilBack = StencilBack.With(state.StencilBack);
+
+        CullMode = state.CullMode ?? CullMode;
+        FillMode = state.FillMode ?? FillMode;
+        FrontFace = state.FrontFace ?? FrontFace;
+        DepthClip = state.DepthClip ?? DepthClip;
+        ScissorTest = state.ScissorTest ?? ScissorTest;
+
+        PrimitiveTopology = state.PrimitiveTopology ?? PrimitiveTopology;
+    }
 }
 
 public readonly record struct StencilState(
