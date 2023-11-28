@@ -9,7 +9,7 @@ partial class Parser
 {
     private PartialPipelineState ParsePipelineVectorDeclaration(Tk key, float x, float y, float z, float w)
     {
-        if (key.Text != nameof(PipelineState.BlendFactor))
+        if (key.Text.ToLowerInvariant() != "blendfactor")
             diagnostics.Add(Mlang.Diagnostics.DiagUnknownPipelineStateForVector(SourceFile, key));
         return new()
         {
