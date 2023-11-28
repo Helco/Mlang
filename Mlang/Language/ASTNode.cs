@@ -27,6 +27,8 @@ internal abstract class ASTNode
 
 internal abstract class ASTExpression : ASTNode
 {
+    public virtual int Precedence { get; } = -1000;
+
     public virtual bool TryOptionEvaluate(IOptionValueSet optionValues, out long value)
     {
         value = 0;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Mlangc")]
 
 namespace Mlang;
 

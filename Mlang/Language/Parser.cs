@@ -306,12 +306,13 @@ internal partial class Parser
 
 #region Functions
     [Rule("Function: Type Identifier ExprBrL ( SingleFullDeclaration (Comma SingleFullDeclaration)*)? ExprBrR FunctionBody")]
-    private ASTNode Function(ASTType returnType, Tk name, Tk _0, Punctuated<ASTDeclaration, Tk> parameters, Tk _1, ASTStatement? body) => new ASTFunction()
+    private ASTFunction Function(ASTType returnType, Tk name, Tk _0, Punctuated<ASTDeclaration, Tk> parameters, Tk _1, ASTStatement? body) => new ASTFunction()
     {
         Range = name.Range,
         ReturnType = returnType is ASTCustomType { Type: "void "} ? null : returnType,
         Name = name.Text,
-        Parameters = parameters.Values.ToArray()
+        Parameters = parameters.Values.ToArray(),
+        Body = body
     };
 
     [Rule("FunctionBody: Semicolon")]
@@ -440,13 +441,13 @@ internal partial class Parser
     [Rule("StageItem: Statement | Function")]
     private ASTNode StageItem(ASTNode node) => node;
 
-    [Rule("GlobalBlock: Option | StageBlock | StorageBlock | PipelineBlock")]
+    [Rule("GlobalBlock: Option | StageBlock | StorageBlock | PipelineBlock | Function")]
     private ASTGlobalBlock GlobalBlock(ASTGlobalBlock node) => node;
 #endregion
 
     // Start symbol
-    [Rule("TranslationUnit: GlobalBlock*")]
-    private ASTNode TranslationUnit(IReadOnlyList<ASTGlobalBlock> blocks) => new ASTTranslationUnit()
+    [Rule("TranslationUnit: GlobalBlock* End")]
+    private ASTTranslationUnit TranslationUnit(IReadOnlyList<ASTGlobalBlock> blocks, Tk _) => new ASTTranslationUnit()
     {
         Range = default,
         Blocks = blocks.ToArray()

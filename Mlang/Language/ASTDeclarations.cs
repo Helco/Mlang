@@ -173,15 +173,25 @@ internal class ASTStorageBlock : ASTConditionalGlobalBlock
             Condition.Write(writer);
             writer.Write(')');
         }
-        writer.WriteLine();
-        writer.WriteLine("{");
-        using var indented = writer.Indented;
-        foreach (var decl in Declarations)
+
+        if (Declarations.Length == 1)
         {
-            decl.Write(indented);
-            indented.WriteLine();
+            writer.Write(' ');
+            Declarations.Single().Write(writer);
+            writer.WriteLine(';');
         }
-        writer.WriteLine("}");
+        else
+        {
+            writer.WriteLine();
+            writer.WriteLine('{');
+            using var indented = writer.Indented;
+            foreach (var decl in Declarations)
+            {
+                decl.Write(indented);
+                indented.WriteLine(';');
+            }
+            writer.WriteLine('}');
+        }
     }
 }
 

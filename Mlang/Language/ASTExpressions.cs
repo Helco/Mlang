@@ -6,6 +6,7 @@ namespace Mlang.Language;
 
 internal class ASTIntegerLiteral : ASTExpression
 {
+    public override int Precedence => -3;
     public long Value { get; init; }
 
     public override bool TryOptionEvaluate(IOptionValueSet optionValues, out long value)
@@ -19,6 +20,7 @@ internal class ASTIntegerLiteral : ASTExpression
 
 internal class ASTRealLiteral : ASTExpression
 {
+    public override int Precedence => -3;
     public double Value { get; init; }
 
     public override void Write(CodeWriter writer)
@@ -30,6 +32,7 @@ internal class ASTRealLiteral : ASTExpression
 
 internal class ASTVariable : ASTExpression
 {
+    public override int Precedence => -3;
     public required string Name { get; init; }
 
     public override bool TryOptionEvaluate(IOptionValueSet optionValues, out long value)
@@ -44,6 +47,7 @@ internal class ASTVariable : ASTExpression
 
 internal class ASTFunctionCall : ASTExpression
 {
+    public override int Precedence => -2;
     public required ASTExpression Function { get; init; }
     public required ASTExpression[] Parameters { get; init; }
 
@@ -72,6 +76,7 @@ internal class ASTFunctionCall : ASTExpression
 
 internal class ASTArrayAccess : ASTExpression
 {
+    public override int Precedence => -2;
     public required ASTExpression Array { get; init; }
     public required ASTExpression Index { get; init; }
 
@@ -93,6 +98,7 @@ internal class ASTArrayAccess : ASTExpression
 
 internal class ASTMemberAccess : ASTExpression
 {
+    public override int Precedence => -2;
     public required ASTExpression Parent { get; init; }
     public required string Member { get; init; }
 
@@ -112,6 +118,7 @@ internal class ASTMemberAccess : ASTExpression
 
 internal class ASTPostUnaryExpression : ASTExpression
 {
+    public override int Precedence => -2;
     public required ASTExpression Operand { get; init; }
     public required TokenKind Operator { get; init; }
 
@@ -135,6 +142,7 @@ internal class ASTPostUnaryExpression : ASTExpression
 
 internal class ASTUnaryExpression : ASTExpression
 {
+    public override int Precedence => -1;
     public required ASTExpression Operand { get; init; }
     public required TokenKind Operator { get; init; }
 
@@ -158,7 +166,6 @@ internal class ASTUnaryExpression : ASTExpression
 
     public override void Write(CodeWriter writer)
     {
-        Operand.Write(writer);
         writer.Write(Operator switch
         {
             TokenKind.Increment => "++",
@@ -169,15 +176,16 @@ internal class ASTUnaryExpression : ASTExpression
             TokenKind.BitNegate => "~",
             _ => throw new InvalidOperationException("Invalid operator in UnaryExpression")
         });
+        Operand.Write(writer);
     }
 }
 
 internal class ASTBinaryExpression : ASTExpression
 {
+    public override int Precedence => Precedences.TryGetValue(Operator, out int prec) ? prec : -1000;
     public required ASTExpression Left { get; init; }
     public required ASTExpression Right { get; init; }
     public required TokenKind Operator { get; init; }
-    public int Precedence => Precedences.TryGetValue(Operator, out int prec) ? prec : -1;
 
     public override bool TryOptionEvaluate(IOptionValueSet optionValues, out long value)
     {
@@ -210,8 +218,7 @@ internal class ASTBinaryExpression : ASTExpression
 
     public override void Write(CodeWriter writer)
     {
-        var leftPrecedence = (Left as ASTBinaryExpression)?.Precedence ?? -1;
-        Left.WriteBracketed(writer, leftPrecedence <= Precedence);
+        Left.WriteBracketed(writer, Precedence < Left.Precedence);
 
         if (Operator != TokenKind.Comma)
             writer.Write(' ');
@@ -247,9 +254,7 @@ internal class ASTBinaryExpression : ASTExpression
         });
         writer.Write(' ');
 
-        var rightPrecedence = (Right as ASTBinaryExpression)?.Precedence ?? -1;
-        Right.WriteBracketed(writer, rightPrecedence < Precedence);
-        // for right operands to have equal precedence means the source had brackets
+        Right.WriteBracketed(writer, Precedence <= Right.Precedence);
     }
 
     private static readonly IReadOnlyDictionary<TokenKind, int> Precedences = new Dictionary<TokenKind, int>()
@@ -278,12 +283,13 @@ internal class ASTBinaryExpression : ASTExpression
         { TokenKind.SubtractAssign,     11 },
         { TokenKind.MultiplicateAssign, 11 },
         { TokenKind.DivideAssign,       11 },
-        { TokenKind.Comma,              12 },
+        { TokenKind.Comma,              1000 },
     };
 }
 
 internal class ASTConditional : ASTExpression
 {
+    public override int Precedence => 20;
     public required ASTExpression Condition { get; init; }
     public required ASTExpression Then { get; init; }
     public required ASTExpression Else { get; init; }
