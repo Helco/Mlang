@@ -144,10 +144,9 @@ internal class ASTFunction : ASTGlobalBlock
     }
 }
 
-internal class ASTStorageBlock : ASTGlobalBlock
+internal class ASTStorageBlock : ASTConditionalGlobalBLock
 {
     public required TokenKind StorageKind { get; init; }
-    public required ASTExpression? Condition { get; init; }
     public required ASTDeclaration[] Declarations { get; init; }
 
     public override void Visit(IASTVisitor visitor)
@@ -186,7 +185,7 @@ internal class ASTStorageBlock : ASTGlobalBlock
     }
 }
 
-internal class ASTStageBlock : ASTGlobalBlock
+internal class ASTStageBlock : ASTConditionalGlobalBLock
 {
     public required TokenKind Stage { get; init; }
     public required ASTFunction[] Functions { get; init; }

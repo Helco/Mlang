@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Mlang.Model;
 using Yoakke.SynKit.Lexer;
 using Yoakke.SynKit.Parser;
 using Yoakke.SynKit.Parser.Attributes;
@@ -13,8 +14,10 @@ namespace Mlang.Language;
 internal partial class Parser
 {
     private List<Diagnostic> diagnostics = new();
+    private int nextOptionIndex = 0;
+    private int nextOptionBitOffset = 0;
 
-    public required ISourceFile SourceFile { get; init; } = null!;
+    public required ISourceFile SourceFile { get; init; }
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
 
 #region Expressions
@@ -40,36 +43,65 @@ internal partial class Parser
     private ASTExpression PrimaryExpression(Tk _0, ASTExpression expr, Tk _1) => expr;
 
     [Rule("PrimaryExpression: UnsignedInteger")]
-    private ASTExpression PrimaryExpressionInt(Tk literal) =>
-        throw new NotImplementedException();
+    private ASTExpression PrimaryExpressionInt(Tk literal) => new ASTIntegerLiteral()
+    {
+        Range = literal.Range,
+        Value = long.Parse(literal.Text)
+    };
 
     [Rule("PrimaryExpression: UnsignedReal")]
-    private ASTExpression PrimaryExpressionReal(Tk literal) =>
-        throw new NotImplementedException();
+    private ASTExpression PrimaryExpressionReal(Tk literal) => new ASTRealLiteral()
+    {
+        Range = literal.Range,
+        Value = double.Parse(literal.Text)
+    };
     
     [Rule("PrimaryExpression: Identifier")]
-    private ASTExpression PrimaryExpressionVar(Tk varIdentifier) =>
-        throw new NotImplementedException();
+    private ASTExpression PrimaryExpressionVar(Tk varIdentifier) => new ASTVariable()
+    {
+        Range = varIdentifier.Range,
+        Name = varIdentifier.Text
+    };
 
     [Rule("PostfixExpression: PostfixExpression ExprBrL (Expression (Comma AssignmentExpression)*)? ExprBrR")]
-    private ASTExpression PostfixExpressionCall(ASTExpression function, Tk _0, Punctuated<ASTExpression, Tk> parameters, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTExpression PostfixExpressionCall(ASTExpression function, Tk _0, Punctuated<ASTExpression, Tk> parameters, Tk _1) => new ASTFunctionCall()
+    {
+        Range = new(function.Range, _1.Range),
+        Function = function,
+        Parameters = parameters.Values.ToArray()
+    };
 
     [Rule("PostfixExpression: PostfixExpression ArrayBrL Expression ArrayBrR")]
-    private ASTExpression PostfixExpressionArray(ASTExpression array, Tk _0, ASTExpression index, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTExpression PostfixExpressionArray(ASTExpression array, Tk _0, ASTExpression index, Tk _1) => new ASTArrayAccess()
+    {
+        Range = new(_0.Range, _1.Range),
+        Array = array,
+        Index = index  
+    };
 
     [Rule("PostfixExpression: PostfixExpression ( Increment | Decrement )")]
-    private ASTExpression PostfixExpressionUnary(ASTExpression array, Tk op) =>
-        throw new NotImplementedException();
+    private ASTExpression PostfixExpressionUnary(ASTExpression operand, Tk op) => new ASTPostUnaryExpression()
+    {
+        Range = op.Range,
+        Operand = operand,
+        Operator = op.Kind
+    };
 
     [Rule("PostfixExpression: PostfixExpression Dot Identifier")]
-    private ASTExpression PostfixExpressionMember(ASTExpression parent, Tk _0, Tk member) =>
-        throw new NotImplementedException();
+    private ASTExpression PostfixExpressionMember(ASTExpression parent, Tk _0, Tk member) => new ASTMemberAccess()
+    {
+        Range = member.Range,
+        Parent = parent,
+        Member = member.Text
+    };
 
     [Rule("UnaryExpression: ( Increment | Decrement | Add | Subtract | Ampersand | BitNegate ) UnaryExpression")]
-    private ASTExpression UnaryExpressionPrefix(Tk op, ASTExpression value) =>
-        throw new NotImplementedException();
+    private ASTExpression UnaryExpressionPrefix(Tk op, ASTExpression value) => new ASTUnaryExpression()
+    {
+        Range = op.Range,
+        Operand = value,
+        Operator = op.Kind
+    };
 
     [Rule("MultiplicativeExpression: MultiplicativeExpression ( Multiplicate | Divide | Modulo ) UnaryExpression")]
     [Rule("AdditiveExpression: AdditiveExpression ( Add | Subtract ) MultiplicativeExpression")]
@@ -84,12 +116,22 @@ internal partial class Parser
     [Rule("LogicalOrExpression: LogicalOrExpression LogicalOr LogicalXorExpression")]
     [Rule("AssignmentExpression: PostfixExpression ( Assign | AddAssign | SubtractAssign | MultiplicateAssign | DivideAssign | ModuloAssign ) AssignmentExpression")]
     [Rule("Expression: Expression Comma AssignmentExpression")]
-    private ASTExpression BinaryExpression(ASTExpression left, Tk op, ASTExpression right) =>
-        throw new NotImplementedException();
+    private ASTExpression BinaryExpression(ASTExpression left, Tk op, ASTExpression right) => new ASTBinaryExpression()
+    {
+        Range = op.Range,
+        Left = left,
+        Operator = op.Kind,
+        Right = right
+    };
 
     [Rule("ConditionalExpression: LogicalOrExpression Question Expression Colon AssignmentExpression")]
-    private ASTExpression ConditionalExpression(ASTExpression condition, Tk _0, ASTExpression thenValue, Tk _1, ASTExpression elseValue) =>
-        throw new NotImplementedException();
+    private ASTExpression ConditionalExpression(ASTExpression condition, Tk _0, ASTExpression thenValue, Tk _1, ASTExpression elseValue) => new ASTConditional()
+    {
+        Range = _0.Range,
+        Condition = condition,
+        Then = thenValue,
+        Else = elseValue
+    };
 #endregion
 
 #region Statements
@@ -99,90 +141,179 @@ internal partial class Parser
     private ASTStatement Statement(ASTStatement stmt) => stmt;
 
     [Rule("EmptyStatement: Semicolon")]
-    private ASTStatement EmptyStatement(Tk _0) =>
-        throw new NotImplementedException();
+    private ASTStatement EmptyStatement(Tk _0) => new ASTEmptyStatement()
+    {
+        Range = _0.Range
+    };
 
     [Rule("ExpressionStatement: Expression Semicolon")]
-    private ASTStatement ExpressionStatement(ASTExpression expr, Tk _0) =>
-        throw new NotImplementedException();
+    private ASTStatement ExpressionStatement(ASTExpression expr, Tk _0) => new ASTExpressionStatement()
+    {
+        Range = expr.Range,
+        Expression = expr
+    };
 
     [Rule("SelectionStatement: KwIf ExprBrL Expression ExprBrR Statement ElseStatement?")]
-    private ASTStatement SelectionStatement(Tk _0, Tk _1, ASTExpression condition, Tk _2, ASTStatement thenBody, ASTStatement? elseBody) =>
-        throw new NotImplementedException();
+    private ASTStatement SelectionStatement(Tk _0, Tk _1, ASTExpression condition, Tk _2, ASTStatement thenBody, ASTStatement? elseBody) => new ASTSelection()
+    {
+        Range = _0.Range,
+        Condition = condition,
+        Then = thenBody,
+        Else = elseBody
+    };
 
     [Rule("ElseStatement: KwElse Statement")]
     private ASTStatement ElseStatement(Tk _0, ASTStatement body) => body;
 
     [Rule("SwitchStatement: KwSwitch ExprBrL Expression ExprBrR ScopeBrL SwitchBodyStatement* ScopeBrR")]
-    private ASTStatement SwitchStatement(Tk _0, Tk _1, ASTExpression value, Tk _2, Tk _3, IReadOnlyList<ASTStatement> body, Tk _4) =>
-        throw new NotImplementedException();
+    private ASTStatement SwitchStatement(Tk _0, Tk _1, ASTExpression value, Tk _2, Tk _3, IReadOnlyList<ASTStatement> body, Tk _4) => new ASTSwitchStatement()
+    {
+        Range = _0.Range,
+        Value = value,
+        Body = body.ToArray()
+    };
 
     [Rule("CaseLabel: KwCase Expression Colon")]
-    private ASTStatement CaseLabel(Tk _0, ASTExpression value, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTStatement CaseLabel(Tk _0, ASTExpression value, Tk _1) => new ASTCaseLabel()
+    {
+        Range = _0.Range,
+        Value = value
+    };
 
     [Rule("DefaultLabel: KwDefault Colon")]
-    private ASTStatement DefaultLabel(Tk _0, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTStatement DefaultLabel(Tk _0, Tk _1) => new ASTDefaultLabel()
+    {
+        Range = _0.Range
+    };
 
     [Rule("ForLoop: KwFor ExprBrL ForInitStatement Expression Semicolon Expression? ExprBrR Statement")]
-    private ASTStatement ForLoop(Tk _0, Tk _1, ASTStatement init, ASTExpression condition, Tk _2, ASTExpression? update, Tk _3, ASTStatement body) =>
-        throw new NotImplementedException();
+    private ASTStatement ForLoop(Tk _0, Tk _1, ASTStatement init, ASTExpression condition, Tk _2, ASTExpression? update, Tk _3, ASTStatement body) => new ASTForLoop()
+    {
+        Range = _0.Range,
+        Init = init,
+        Condition = condition,
+        Update = update,
+        Body = body
+    };
 
     [Rule("WhileLoop: KwWhile ExprBrL Expression ExprBrR Statement")]
-    private ASTStatement WhileLoop(Tk _0, Tk _1, ASTExpression condition, Tk _2, ASTStatement body) =>
-        throw new NotImplementedException();
+    private ASTStatement WhileLoop(Tk _0, Tk _1, ASTExpression condition, Tk _2, ASTStatement body) => new ASTWhileLoop()
+    {
+        Range = _0.Range,
+        Condition = condition,
+        Body = body
+    };
 
     [Rule("DoWhileLoop: KwDo Statement KwWhile ExprBrL Expression ExprBrR Semicolon")]
-    private ASTStatement DoWhileLoop(Tk _0, ASTStatement body, Tk _1, Tk _2, ASTExpression condition, Tk _3, Tk _4) =>
-        throw new NotImplementedException();
+    private ASTStatement DoWhileLoop(Tk _0, ASTStatement body, Tk _1, Tk _2, ASTExpression condition, Tk _3, Tk _4) => new ASTDoWhileLoop()
+    {
+        Range = _0.Range,
+        Condition = condition,
+        Body = body
+    };
 
     [Rule("ReturnStatement: KwReturn Expression? Semicolon")]
-    private ASTStatement ReturnStatement(Tk _0, ASTExpression? value, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTStatement ReturnStatement(Tk _0, ASTExpression? value, Tk _1) => new ASTReturn()
+    {
+        Range = _0.Range,
+        Value = value
+    };
 
     [Rule("FlowStatement: (KwBreak | KwContinue | KwDiscard) Semicolon")]
-    private ASTStatement FlowStatement(Tk instruction, Tk _0) =>
-        throw new NotImplementedException();
+    private ASTStatement FlowStatement(Tk instruction, Tk _0) => new ASTFlowStatement()
+    {
+        Range = instruction.Range,
+        Instruction = instruction.Kind
+    };
 
     [Rule("DeclarationStatement: Type (DeclarationWithInitializer (Comma DeclarationWithInitializer)*) Semicolon")]
-    private ASTStatement DeclarationStatement(ASTType type, Punctuated<(string name, ASTExpression? value), Tk> declarations, Tk _0) =>
-        throw new NotImplementedException();
+    private ASTDeclarationStatement DeclarationStatement(ASTType type, Punctuated<(Tk name, ASTExpression? value), Tk> declarations, Tk _0) => new ASTDeclarationStatement()
+    {
+        Range = type.Range,
+        Declarations = declarations.Values.Select(t => new ASTDeclaration()
+        {
+            Range = t.name.Range,
+            Type = type,
+            Name = t.name.Text,
+            Initializer = t.value
+        }).ToArray()
+    };
 
     [Rule("StatementScope: ScopeBrL Statement* ScopeBrR")]
-    private ASTStatement StatementScope(Tk _0, IReadOnlyList<ASTStatement> body, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTStatement StatementScope(Tk _0, IReadOnlyList<ASTStatement> body, Tk _1) => new ASTStatementScope()
+    {
+        Range = _0.Range,
+        Body = body.ToArray()
+    };
 #endregion
 
 #region Types and declarations
     [Rule("Type: Identifier")]
-    private ASTType NamedType(Tk name) =>
-        throw new NotImplementedException();
+    private ASTType NamedType(Tk name) => name.Text switch
+    {
+        _ when NumericType.TryParse(name.Text, out var numericType) => new ASTNumericType()
+        {
+            Range = name.Range,
+            Type = numericType
+        },
+        _ when ImageType.TryParse(name.Text, out var imageType) => new ASTImageType()
+        {
+            Range = name.Range,
+            Type = imageType
+        },
+        _ when ImageType.TryParseSamplerType(name.Text, out var samplerType) => new ASTSamplerType()
+        {
+            Range = name.Range,
+            Type = samplerType
+        },
+        _ => new ASTCustomType()
+        {
+            Range = name.Range,
+            Type = name.Text
+        }
+    };
 
     [Rule("Type: KwBuffer Type")]
-    private ASTType QualifiedType(Tk qualifier, ASTType type) =>
-        throw new NotImplementedException();
+    private ASTType QualifiedType(Tk qualifier, ASTType type) => new ASTBufferType()
+    {
+        Range = qualifier.Range,
+        Inner = type
+    };
 
     [Rule("Type: Type ArrayBrL Expression? ArrayBrR")]
-    private ASTType ArrayType(ASTType element, Tk _0, ASTExpression? size, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTType ArrayType(ASTType element, Tk _0, ASTExpression? size, Tk _1) => new ASTArrayType()
+    {
+        Range = new(_0.Range, _1.Range),
+        Element = element,
+        Size = size
+    };
 
     [Rule("DeclarationWithInitializer: Identifier DeclarationInitializer?")]
-    private (string name, ASTExpression? value) DeclarationWithInitializer(Tk name, ASTExpression? value) =>
-        (name.Text, value);
+    private (Tk name, ASTExpression? value) DeclarationWithInitializer(Tk name, ASTExpression? value) =>
+        (name, value);
 
     [Rule("DeclarationInitializer: Assign LogicalOrExpression")]
     private ASTExpression DeclarationInitializer(Tk _0, ASTExpression value) => value;
 
     [Rule("SingleFullDeclaration: Type Identifier DeclarationInitializer?")]
-    private ASTDeclaration SingleFullDeclaration(ASTType type, Tk name, ASTExpression? value) =>
-        throw new NotImplementedException();
+    private ASTDeclaration SingleFullDeclaration(ASTType type, Tk name, ASTExpression? value) => new ASTDeclaration()
+    {
+        Range = name.Range,
+        Type = type,
+        Name = name.Text,
+        Initializer = value
+    };
 #endregion
 
 #region Functions
     [Rule("Function: Type Identifier ExprBrL ( SingleFullDeclaration (Comma SingleFullDeclaration)*)? ExprBrR FunctionBody")]
-    private ASTNode Function(ASTType returnType, Tk name, Tk _0, Punctuated<ASTDeclaration, Tk> parameters, Tk _1, ASTStatement? body) =>
-        throw new NotImplementedException();
+    private ASTNode Function(ASTType returnType, Tk name, Tk _0, Punctuated<ASTDeclaration, Tk> parameters, Tk _1, ASTStatement? body) => new ASTFunction()
+    {
+        Range = name.Range,
+        ReturnType = returnType is ASTCustomType { Type: "void "} ? null : returnType,
+        Name = name.Text,
+        Parameters = parameters.Values.ToArray()
+    };
 
     [Rule("FunctionBody: Semicolon")]
     private ASTStatement? NoFunctionBody(Tk _0) => null;
@@ -193,26 +324,61 @@ internal partial class Parser
 
 #region Global blocks
     [Rule("Option: KwOption Identifier Semicolon")]
-    private ASTGlobalBlock Option(Tk _0, Tk name, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTGlobalBlock Option(Tk _0, Tk name, Tk _1) => new ASTOption()
+    {
+        Range = name.Range,
+        Name = name.Text,
+        Index = nextOptionIndex++,
+        BitOffset = nextOptionBitOffset++,
+        NamedValues = null
+    };
 
     [Rule("Option: KwOption Identifier Assign (Identifier (Comma Identifier)*) Semicolon")]
-    private ASTGlobalBlock Option(Tk _0, Tk name, Tk _2, Punctuated<Tk, Tk> values, Tk _3) =>
-        throw new NotImplementedException();
+    private ASTGlobalBlock Option(Tk _0, Tk name, Tk _2, Punctuated<Tk, Tk> values, Tk _3)
+    {
+        var option = new ASTOption()
+        {
+            Range = name.Range,
+            Name = name.Text,
+            Index = nextOptionIndex++,
+            BitOffset = nextOptionBitOffset,
+            NamedValues = values.Select(v => v.Value.Text).ToArray()
+        };
+        int bitCount = option.BitCount;
+        if (bitCount < 1)
+            diagnostics.Add(Mlang.Diagnostics.DiagTooFewOptions(SourceFile, option.Range));
+        nextOptionBitOffset += bitCount;
+        return option;
+    }
 
     [Rule("BlockCondition: KwIf ExprBrL Expression ExprBrR")]
     private ASTExpression BlockCondition(Tk _0, Tk _1, ASTExpression condition, Tk _2) => condition;
 
     [Rule("StorageBlock: StorageBlockKind BlockCondition? Type Identifier Semicolon")]
-    private ASTGlobalBlock StorageBlock(TokenKind kind, ASTExpression? condition, ASTType type, Tk name, Tk _0) =>
-        throw new NotImplementedException();
+    private ASTGlobalBlock StorageBlock(Tk kind, ASTExpression? condition, ASTType type, Tk name, Tk _0) => new ASTStorageBlock()
+    {
+        Range = kind.Range,
+        StorageKind = kind.Kind,
+        Condition = condition,
+        Declarations = [new ASTDeclaration()
+        {
+            Range = name.Range,
+            Type = type,
+            Name = name.Text
+        }]
+    };
 
     [Rule("StorageBlock: StorageBlockKind BlockCondition? ScopeBrL DeclarationStatement* ScopeBrR")]
-    private ASTGlobalBlock StorageBlock(TokenKind kind, ASTExpression? condition, Tk _0, IReadOnlyList<ASTStatement> declarations, Tk _1) =>
-        throw new NotImplementedException();
+    private ASTGlobalBlock StorageBlock(Tk kind, ASTExpression? condition, Tk _0, IReadOnlyList<ASTDeclarationStatement> declarations, Tk _1) => new ASTStorageBlock()
+    {
+        Range = kind.Range,
+        StorageKind = kind.Kind,
+        Condition = condition,
+        Declarations = declarations.SelectMany(d => d.Declarations).ToArray()
+    };
 
     [Rule("StorageBlockKind: KwAttributes | KwInstances | KwUniform | KwVarying")]
-    private TokenKind StorageBlockKind(Tk kind) => kind.Kind;
+    private Tk StorageBlockKind(Tk kind) => kind;
 
     [Rule("PipelineDeclaration: Identifier ( Identifier | UnsignedInteger | UnsignedReal )? Semicolon")]
     private ASTNode PipelineDeclarationSingleOrNone(Tk key, Tk? value, Tk _0) =>
@@ -234,9 +400,15 @@ internal partial class Parser
     private ASTGlobalBlock PipelineBlock(Tk _0, ASTExpression? condition, Tk _1, IReadOnlyList<ASTNode> declarations, Tk _2) =>
         throw new NotImplementedException();
 
-    [Rule("StageBlock: ( KwVertex | KwFragment ) ScopeBrL StageItem* ScopeBrR")]
-    private ASTGlobalBlock StageBlock(Tk kind, Tk _0, IReadOnlyList<ASTNode> items, Tk _1) =>
-        throw new NotImplementedException();
+    [Rule("StageBlock: ( KwVertex | KwFragment ) BlockCondition? ScopeBrL StageItem* ScopeBrR")]
+    private ASTGlobalBlock StageBlock(Tk kind, ASTExpression? condition, Tk _0, IReadOnlyList<ASTNode> items, Tk _1) => new ASTStageBlock()
+    {
+        Range = kind.Range,
+        Stage = kind.Kind,
+        Condition = condition,
+        Functions = items.OfType<ASTFunction>().ToArray(),
+        Statements = items.OfType<ASTStatement>().ToArray()
+    };
 
     [Rule("StageItem: Statement | Function")]
     private ASTNode StageItem(ASTNode node) => node;
@@ -247,6 +419,9 @@ internal partial class Parser
 
     // Start symbol
     [Rule("TranslationUnit: GlobalBlock*")]
-    private ASTNode TranslationUnit(IReadOnlyList<ASTGlobalBlock> blocks) =>
-        throw new NotImplementedException();
+    private ASTNode TranslationUnit(IReadOnlyList<ASTGlobalBlock> blocks) => new ASTTranslationUnit()
+    {
+        Range = default,
+        Blocks = blocks.ToArray()
+    };
 }

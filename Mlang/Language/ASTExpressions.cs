@@ -19,7 +19,7 @@ internal class ASTIntegerLiteral : ASTExpression
 
 internal class ASTRealLiteral : ASTExpression
 {
-    public float Value { get; init; }
+    public double Value { get; init; }
 
     public override void Write(CodeWriter writer)
     {
@@ -72,22 +72,41 @@ internal class ASTFunctionCall : ASTExpression
 
 internal class ASTArrayAccess : ASTExpression
 {
-    public required ASTExpression array { get; init; }
-    public required ASTExpression index { get; init; }
+    public required ASTExpression Array { get; init; }
+    public required ASTExpression Index { get; init; }
 
     public override void Visit(IASTVisitor visitor)
     {
         visitor.Visit(this);
-        array.Visit(visitor);
-        index.Visit(visitor);
+        Array.Visit(visitor);
+        Index.Visit(visitor);
     }
 
     public override void Write(CodeWriter writer)
     {
-        array.Write(writer);
+        Array.Write(writer);
         writer.Write('[');
-        index.Write(writer);
+        Index.Write(writer);
         writer.Write(']');
+    }
+}
+
+internal class ASTMemberAccess : ASTExpression
+{
+    public required ASTExpression Parent { get; init; }
+    public required string Member { get; init; }
+
+    public override void Visit(IASTVisitor visitor)
+    {
+        visitor.Visit(this);
+        Parent.Visit(visitor);
+    }
+
+    public override void Write(CodeWriter writer)
+    {
+        Parent.Write(writer);
+        writer.Write('.');
+        writer.Write(Member);
     }
 }
 

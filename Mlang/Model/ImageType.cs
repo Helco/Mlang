@@ -70,10 +70,10 @@ public readonly record struct ImageType(
         }
     }
 
-    public bool TryParse(string text, out ImageType type) =>
+    public static bool TryParse(string text, out ImageType type) =>
         TypeNames.TryGetValue(text, out type);
 
-    public bool TryParseSamplerType(string text, out SamplerType type)
+    public static bool TryParseSamplerType(string text, out SamplerType type)
     {
         type = default;
         if (text == SamplerType.Normal.AsGLSLName()) type = SamplerType.Normal;

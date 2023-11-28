@@ -56,6 +56,11 @@ internal abstract class ASTGlobalBlock : ASTNode
 {
 }
 
+internal abstract class ASTConditionalGlobalBLock : ASTGlobalBlock
+{
+    public required ASTExpression? Condition { get; init; }
+}
+
 internal class ASTOption : ASTGlobalBlock
 {
     public required int Index { get; init; }
@@ -63,7 +68,7 @@ internal class ASTOption : ASTGlobalBlock
     public required string Name { get; init; }
     public required string[]? NamedValues { get; init; }
     public int ValueCount => NamedValues?.Length ?? 2;
-    public int BitCount => (int)Math.Ceiling(Math.Log(ValueCount) / Math.Log(2));
+    public int BitCount => GetBitCount(ValueCount);
 
     public override void Write(CodeWriter writer)
     {
@@ -80,5 +85,29 @@ internal class ASTOption : ASTGlobalBlock
             }
         }
         writer.WriteLine(";");
+    }
+
+    public static int GetBitCount(int valueCount) =>
+        (int)Math.Ceiling(Math.Log(valueCount) / Math.Log(2));
+}
+
+internal class ASTTranslationUnit : ASTNode
+{
+    public required ASTGlobalBlock[] Blocks { get; init; }
+
+    public override void Visit(IASTVisitor visitor)
+    {
+        visitor.Visit(this);
+        foreach (var block in Blocks)
+            block.Visit(visitor);
+    }
+
+    public override void Write(CodeWriter writer)
+    {
+        foreach (var block in Blocks)
+        {
+            block.Write(writer);
+            writer.WriteLine();
+        }
     }
 }

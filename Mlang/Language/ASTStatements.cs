@@ -39,17 +39,17 @@ internal class ASTDeclarationStatement : ASTStatement
 
 internal class ASTExpressionStatement : ASTStatement
 {
-    public required ASTExpression Statement { get; init; }
+    public required ASTExpression Expression { get; init; }
 
     public override void Visit(IASTVisitor visitor)
     {
         visitor.Visit(this);
-        Statement.Visit(visitor);
+        Expression.Visit(visitor);
     }
 
     public override void Write(CodeWriter writer)
     {
-        Statement.Write(writer);
+        Expression.Write(writer);
         writer.WriteLine(";");
     }
 }

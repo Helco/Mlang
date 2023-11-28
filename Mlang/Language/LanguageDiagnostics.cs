@@ -5,6 +5,7 @@ using Yoakke.SynKit.Lexer;
 using Yoakke.SynKit.Parser;
 using Yoakke.SynKit.Reporting.Present;
 using Yoakke.SynKit.Text;
+using TextRange = Yoakke.SynKit.Text.Range;
 
 namespace Mlang;
 
@@ -24,4 +25,10 @@ partial class Diagnostics
             token.Kind,
             string.Join("\n", elements.Select(e => $"For {e.Context} expected {string.Join(" or ", e.Expected)}"))
         }, new[] { new Location(source, token.Range) });
+
+    internal static readonly DiagnosticType TypeTooFewOptions = CategoryLanguage.Create(
+        Severity.Error, "An option needs at least two values");
+
+    internal static Diagnostic DiagTooFewOptions(ISourceFile source, TextRange range) =>
+        TypeTooFewOptions.Create(sourceInfos: [new Location(source, range)]);
 }
