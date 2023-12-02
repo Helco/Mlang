@@ -44,6 +44,10 @@ internal class PartialPipelineState
 
     public PrimitiveTopology? PrimitiveTopology;
 
+    public PixelFormat? DepthOutput;
+    public KeyValuePair<string, PixelFormat>[] ColorOutputs = Array.Empty<KeyValuePair<string, PixelFormat>>();
+    public byte? OutputSamples;
+
     public void With(PartialPipelineState state)
     {
         CoverageToAlpha = state.CoverageToAlpha ?? CoverageToAlpha;
@@ -67,6 +71,10 @@ internal class PartialPipelineState
         ScissorTest = state.ScissorTest ?? ScissorTest;
 
         PrimitiveTopology = state.PrimitiveTopology ?? PrimitiveTopology;
+
+        DepthOutput = state.DepthOutput ?? DepthOutput;
+        ColorOutputs = ColorOutputs.Concat(state.ColorOutputs).ToArray();
+        OutputSamples = state.OutputSamples ?? OutputSamples;
     }
 }
 
@@ -106,16 +114,22 @@ public record PipelineState
 
     public PrimitiveTopology PrimitiveTopology { get; init; }
 
+    public PixelFormat? DepthOutput { get; init; }
+    public required IReadOnlyList<KeyValuePair<string, PixelFormat>> ColorOutputs { get; init; }
+    public byte OutputSamples { get; init; }
+
     public static PipelineState GetDefault(int attachmentCounts) => new()
     {
         BlendAttachments = new BlendAttachment[attachmentCounts],
+        ColorOutputs = new KeyValuePair<string, PixelFormat>[attachmentCounts],
         DepthTest = true,
         DepthWrite = true,
         CullMode = FaceCullMode.Back,
         FillMode = PolygonFillMode.Solid,
         FrontFace = FrontFace.CounterClockwise,
         DepthClip = true,
-        PrimitiveTopology = PrimitiveTopology.TriangleList
+        PrimitiveTopology = PrimitiveTopology.TriangleList,
+        OutputSamples = 1
     };
 
     internal PipelineState With(PartialPipelineState s) => new()
@@ -142,6 +156,13 @@ public record PipelineState
         DepthClip = s.DepthClip ?? DepthClip,
         ScissorTest = s.ScissorTest ?? ScissorTest,
 
-        PrimitiveTopology = s.PrimitiveTopology ?? PrimitiveTopology
+        PrimitiveTopology = s.PrimitiveTopology ?? PrimitiveTopology,
+
+        DepthOutput = s.DepthOutput ?? DepthOutput,
+        ColorOutputs =
+            s.ColorOutputs.Concat(ColorOutputs)
+            .Take(Math.Max(s.ColorOutputs.Length, ColorOutputs.Count))
+            .ToArray(),
+        OutputSamples = s.OutputSamples ?? OutputSamples
     };
 }

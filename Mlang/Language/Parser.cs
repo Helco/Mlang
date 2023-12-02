@@ -380,10 +380,17 @@ internal partial class Parser
     [Rule("StorageBlockKind: KwAttributes | KwInstances | KwUniform | KwVarying")]
     private Tk StorageBlockKind(Tk kind) => kind;
 
-    [Rule("PipelineDeclaration: Identifier ( Identifier | UnsignedInteger | UnsignedReal | Assign | Ampersand | Equals | NotEquals | Lesser | Greater | LessOrEquals | GreaterOrEquals )? Semicolon")]
-    private PartialPipelineState PipelineDeclarationSingleOrNone(Tk key, Tk? value, Tk _0) => value == null
-        ? ParsePipelineFactDeclaration(key)
-        : ParsePipelineValueDeclaration(key, value);
+    [Rule("PipelineDeclaration: Identifier Semicolon")]
+    private PartialPipelineState PipelineDeclarationFact(Tk key, Tk _0) =>
+        ParsePipelineFactDeclaration(key);
+
+    [Rule("PipelineDeclaration: Identifier ( Identifier | UnsignedInteger | UnsignedReal | Assign | Ampersand | Equals | NotEquals | Lesser | Greater | LessOrEquals | GreaterOrEquals ) Semicolon")]
+    private PartialPipelineState PipelineDeclarationSingle(Tk key, Tk value, Tk _0) =>
+        ParsePipelineValueDeclaration(key, value);
+
+    [Rule("PipelineDeclaration: Identifier Identifier Identifier Semicolon")]
+    private PartialPipelineState PipelineDeclarationTwoValue(Tk key, Tk value1, Tk value2, Tk _0) =>
+        ParsePipelineTwoValueDeclaration(key, value1, value2);
 
     [Rule("PipelineDeclaration: Identifier AnyNumber AnyNumber AnyNumber AnyNumber Semicolon")]
     private PartialPipelineState PipelineDeclarationVector(Tk key, float x, float y, float z, float w, Tk _0) =>

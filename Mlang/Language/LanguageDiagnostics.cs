@@ -43,6 +43,12 @@ partial class Diagnostics
     internal static Diagnostic DiagUnknownPipelineStateForArgument(ISourceFile source, Tk token) =>
         TypeUnknownPipelineStateForArgument.Create([token.Text], [new(source, token.Range)]);
 
+    internal static readonly DiagnosticType TypeUnknownPipelineStateForTwoArguments = CategoryLanguage.Create(
+        Severity.Error, "Unknown pipeline state for two arguments: {0}");
+
+    internal static Diagnostic DiagUnknownPipelineStateForTwoArguments(ISourceFile source, Tk token) =>
+        TypeUnknownPipelineStateForTwoArguments.Create([token.Text], [new(source, token.Range)]);
+
     internal static readonly DiagnosticType TypeUnknownPipelineStateForVector = CategoryLanguage.Create(
         Severity.Error, "Unknown pipeline state for vector argument: {0}");
 
@@ -115,4 +121,10 @@ partial class Diagnostics
 
     internal static Diagnostic DiagUnknownPrimitiveTopology(ISourceFile source, Tk token) =>
         TypeUnknownPrimitiveTopology.Create([token.Text], [new(source, token.Range)]);
+
+    internal static readonly DiagnosticType TypeUnknownPixelFormat = CategoryLanguage.Create(
+        Severity.Error, "Unknown pixel format: {0}");
+
+    internal static Diagnostic DiagUnknownPixelFormat(ISourceFile source, Tk token) =>
+        TypeUnknownPixelFormat.Create([token.Text], [new(source, token.Range)]);
 }

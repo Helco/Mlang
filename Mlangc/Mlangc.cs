@@ -49,12 +49,11 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform if (IsSkinned) buffer mat4[] pose;
 
-//target r8g8b8a8_unorm outColor;
-//target d24_unorm_s8_uint;
-
-pipeline if (IsOpaque) // technically not necessary
+pipeline
 {
     blend One + Zero;
+    output r8_g8_b8_a8_unorm outColor;
+    output d24_unorm_s8_uint;
 }
 
 pipeline if (IsAlphaBlend)

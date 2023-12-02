@@ -17,6 +17,16 @@ partial class Parser
         };
     }
 
+    private PartialPipelineState ParsePipelineTwoValueDeclaration(Tk key, Tk value1, Tk value2)
+    {
+        if (key.Text.ToLowerInvariant() != "output")
+            diagnostics.Add(Mlang.Diagnostics.DiagUnknownPipelineStateForTwoArguments(SourceFile, key));
+        return new()
+        {
+            ColorOutputs = [new(value2.Text, ParsePixelFormat(value1))]
+        };
+    }
+
     private PartialPipelineState ParsePipelineValueDeclaration(Tk key, Tk value)
     {
         var state = new PartialPipelineState();
@@ -53,6 +63,7 @@ partial class Parser
             case "frontface": state.FrontFace = ParseFrontFace(value); break;
             case "primitivetopology":
             case "topology": state.PrimitiveTopology = ParsePrimitiveTopology(value); break;
+            case "output": state.DepthOutput = ParsePixelFormat(value); break;
 
             default:
                 diagnostics.Add(Mlang.Diagnostics.DiagUnknownPipelineStateForArgument(SourceFile, key));
@@ -169,6 +180,9 @@ partial class Parser
 
     private PrimitiveTopology ParsePrimitiveTopology(Tk token) =>
         ParseEnum<PrimitiveTopology>(token, Mlang.Diagnostics.DiagUnknownPrimitiveTopology);
+
+    private PixelFormat ParsePixelFormat(Tk token) =>
+        ParseEnum<PixelFormat>(token, Mlang.Diagnostics.DiagUnknownPixelFormat);
 
     private TEnum ParseEnum<TEnum>(Tk token, Func<ISourceFile, Tk, Diagnostic> createDiagnostic) where TEnum : struct
     {
