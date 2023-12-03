@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Yoakke.SynKit.Lexer;
-using Yoakke.SynKit.Reporting;
 using Yoakke.SynKit.Text;
+using TextRange = Yoakke.SynKit.Text.Range;
 
 using static Mlang.Diagnostics;
 
@@ -13,6 +12,8 @@ namespace Mlang.Language;
 
 public class Compiler
 {
+    internal const int MaxVariantBits = 16;
+
     private readonly SourceFile sourceFile;
     private readonly Lexer lexer;
     private readonly Parser parser;
@@ -45,18 +46,20 @@ public class Compiler
         {
             var result = parser.ParseTranslationUnit();
             diagnostics.AddRange(parser.Diagnostics);
-            if (result.IsOk)
+            if (!result.IsOk)
             {
-                unit = result.Ok.Value;
-                return true;
+                var errToken = (IToken<TokenKind>)result.Error.Got!;
+                if (errToken.Kind == TokenKind.Error)
+                    diagnostics.Add(DiagLexer(sourceFile, errToken));
+                else
+                    diagnostics.Add(DiagParser(sourceFile, errToken, result.Error.Elements.Values));
+                return false;
             }
+            unit = result.Ok.Value;
 
-            var errToken = (IToken<TokenKind>)result.Error.Got!;
-
-            if (errToken.Kind == TokenKind.Error)
-                diagnostics.Add(DiagLexer(sourceFile, errToken));
-            else
-                diagnostics.Add(DiagParser(sourceFile, errToken, result.Error.Elements.Values));
+            CheckVariantSpace();
+            CheckNamedOptionValues();
+            CheckOptionConditions();
         }
         catch (Exception e)
 #if DEBUG
@@ -67,5 +70,66 @@ public class Compiler
         }
 
         return !HasError;
+    }
+
+    private void CheckVariantSpace()
+    {
+        var lastOption = unit?.Blocks.OfType<ASTOption>().LastOrDefault();
+        if (lastOption == null)
+            return;
+        int totalVariantBits = lastOption.BitOffset + lastOption.BitCount;
+        if (totalVariantBits >= MaxVariantBits)
+        {
+            diagnostics.Add(DiagVariantSpaceTooLarge(totalVariantBits, MaxVariantBits));
+            return;
+        }
+    }
+
+    private void CheckNamedOptionValues()
+    {
+        if (unit == null)
+            return;
+        var options = new Dictionary<string, ASTOption>();
+        foreach (var option in unit.Blocks.OfType<ASTOption>())
+        {
+            if (options.TryGetValue(option.Name, out var prevOption))
+                diagnostics.Add(DiagDuplicateOptionName(sourceFile, prevOption, option));
+            else
+                options.Add(option.Name, option);
+        }
+        
+        var values = new Dictionary<string, (uint, ASTOption)>();
+        foreach (var option in unit.Blocks.OfType<ASTOption>())
+        {
+            if (option.NamedValues == null)
+                continue;
+            for (uint i = 0; i < option.NamedValues.Length; i++)
+            {
+                var name = option.NamedValues[i];
+                if (options.TryGetValue(name, out var prevOption))
+                    diagnostics.Add(DiagOptionNameIsValue(sourceFile, prevOption, option, name));
+
+                if (!values.TryGetValue(name, out var prevValue))
+                    values.Add(name, (i, option));
+                else if (prevValue.Item1 != i)
+                    diagnostics.Add(DiagDuplicateNamedValue(sourceFile, prevValue.Item2, option, name));
+            }
+        }
+    }
+
+    private void CheckOptionConditions()
+    {
+        var optionValueSet = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray());
+        foreach (var block in unit.Blocks.OfType<ASTConditionalGlobalBlock>())
+        {
+            if (block.Condition == null)
+                continue;
+
+            optionValueSet.AccessedOption = false;
+            if (!block.Condition.TryOptionEvaluate(optionValueSet, out var value))
+                diagnostics.Add(DiagOptionConditionNotEvaluable(sourceFile, block.Condition.Range));
+            else if (!optionValueSet.AccessedOption)
+                diagnostics.Add(DiagOptionConditionIsConstant(sourceFile, block.Condition.Range, value));
+        }
     }
 }

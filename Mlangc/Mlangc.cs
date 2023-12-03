@@ -11,7 +11,7 @@ option IsInstanced;
 option IsSkinned;
 option HasTexShift;
 option HasEnvMap;
-option Blend = isOpaque, isAlphaBlend, isAdditiveBlend, isAdditiveAlphaBlend;
+option Blend = IsOpaque, IsAlphaBlend, IsAdditiveBlend, IsAdditiveAlphaBlend;
 
 attributes
 {
@@ -56,17 +56,17 @@ pipeline
     output d24_unorm_s8_uint;
 }
 
-pipeline if (IsAlphaBlend)
+pipeline if (Blend == IsAlphaBlend)
 {
     blend SrcAlpha + InvSrcAlpha;
 }
 
-pipeline if (IsAdditiveBlend)
+pipeline if (Blend == IsAdditiveBlend)
 {
     blend One + One;
 }
 
-pipeline if (IsAdditiveAlphaBlend)
+pipeline if (Blend == IsAdditiveAlphaBlend)
 {
     blend SrcAlpha + One;
 }

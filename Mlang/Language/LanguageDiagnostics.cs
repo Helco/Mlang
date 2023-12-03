@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Mlang.Language;
 using Yoakke.SynKit.Parser;
 using Yoakke.SynKit.Text;
 using TextRange = Yoakke.SynKit.Text.Range;
@@ -10,7 +11,7 @@ namespace Mlang;
 
 partial class Diagnostics
 {
-    internal static readonly DiagnosticCategory CategoryLanguage = new("LANG");
+    internal static readonly DiagnosticCategory CategoryLanguage = new("MLANG");
 
     internal static readonly DiagnosticType TypeLexer = CategoryLanguage.Error("Found invalid token");
     internal static Diagnostic DiagLexer(ISourceFile source, Tk token) =>
@@ -127,4 +128,40 @@ partial class Diagnostics
 
     internal static Diagnostic DiagUnknownPixelFormat(ISourceFile source, Tk token) =>
         TypeUnknownPixelFormat.Create([token.Text], [new(source, token.Range)]);
+
+    internal static readonly DiagnosticType TypeVariantSpaceTooLarge = CategoryLanguage.Create(
+        Severity.Error, "Variant space is too large, it exceeds {0} bits. Maximum is {1} bits");
+
+    internal static Diagnostic DiagVariantSpaceTooLarge(int curBits, int maxBits) =>
+        TypeVariantSpaceTooLarge.Create([curBits, maxBits]);
+
+    internal static readonly DiagnosticType TypeOptionConditionNotEvaluable = CategoryLanguage.Create(
+        Severity.Error, "Global block condition is not evaluable");
+
+    internal static Diagnostic DiagOptionConditionNotEvaluable(ISourceFile source, TextRange range) =>
+        TypeOptionConditionNotEvaluable.Create(sourceInfos: [new(source, range)]);
+
+    internal static readonly DiagnosticType TypeOptionConditionIsConstant = CategoryLanguage.Create(
+        Severity.Warning, "Global block condition is constant and always evaluates to {0}");
+
+    internal static Diagnostic DiagOptionConditionIsConstant(ISourceFile source, TextRange range, long value) =>
+        TypeOptionConditionIsConstant.Create([value == 0 ? "false" : "true"], [new(source, range)]);
+
+    internal static readonly DiagnosticType TypeDuplicateOptionName = CategoryLanguage.Create(
+        Severity.Error, "Option name {0} is duplicated", "Previous declaration", "New declaration");
+
+    internal static Diagnostic DiagDuplicateOptionName(ISourceFile source, ASTOption prevOption, ASTOption newOption) =>
+        TypeDuplicateOptionName.Create([prevOption.Name], [new(source, prevOption.Range), new(source, newOption.Range)]);
+
+    internal static readonly DiagnosticType TypeOptionNameIsValue = CategoryLanguage.Create(
+        Severity.Error, "Named option value {0} is also an option name", "Option declaration", "Named option value declaration");
+
+    internal static Diagnostic DiagOptionNameIsValue(ISourceFile source, ASTOption nameOption, ASTOption valueOption, string valueName) =>
+        TypeOptionNameIsValue.Create([valueName], [new(source, nameOption.Range), new(source, valueOption.Range)]);
+
+    internal static readonly DiagnosticType TypeDuplicateNamedValue = CategoryLanguage.Create(
+        Severity.Error, "Named option value {0} is declared twice with different values", "Previous declaration", "New declaration");
+
+    internal static Diagnostic DiagDuplicateNamedValue(ISourceFile source, ASTOption prevOption, ASTOption newOption, string valueName) =>
+        TypeDuplicateNamedValue.Create([valueName], [new(source, prevOption.Range), new(source, newOption.Range)]);
 }
