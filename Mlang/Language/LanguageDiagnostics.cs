@@ -164,4 +164,34 @@ partial class Diagnostics
 
     internal static Diagnostic DiagDuplicateNamedValue(ISourceFile source, ASTOption prevOption, ASTOption newOption, string valueName) =>
         TypeDuplicateNamedValue.Create([valueName], [new(source, prevOption.Range), new(source, newOption.Range)]);
+
+    internal static readonly DiagnosticType TypeSpecialOptionWithValues = CategoryLanguage.Create(
+        Severity.Error, "Special option {0} should not have named values");
+
+    internal static Diagnostic DiagSpecialOptionWithValues(ISourceFile source, ASTOption option) =>
+        TypeSpecialOptionWithValues.Create([option.Name], [new(source, option.Range)]);
+
+    internal static readonly DiagnosticType TypeInstancedBlockWithoutOption = CategoryLanguage.Create(
+        Severity.Warning, "Instance storage block is used without the special IsInstanced option");
+
+    internal static Diagnostic DiagInstancesBlockWithoutOption(ISourceFile source, TextRange range) =>
+        TypeInstancedBlockWithoutOption.Create(sourceInfos: [new(source, range)]);
+
+    internal static readonly DiagnosticType TypeNoStageBlock = CategoryLanguage.Create(
+        Severity.Error, "Could not find applicable stage block for {0}");
+
+    internal static Diagnostic DiagNoStageBlock(TokenKind stageKind) =>
+        TypeNoStageBlock.Create([stageKind]);
+
+    internal static readonly DiagnosticType TypeMultipleStageBlocks = CategoryLanguage.Create(
+        Severity.Error, "Found multiple stage blocks for {0}");
+
+    internal static Diagnostic DiagMultipleStageBlocks(ISourceFile source, TextRange range1, TextRange range2, TokenKind stageKind) =>
+        TypeMultipleStageBlocks.Create([stageKind], [new(source, range1), new(source, range2)]);
+
+    internal static readonly DiagnosticType TypeDuplicateStorageName = CategoryLanguage.Create(
+        Severity.Error, "Found duplicated and applicable storage variable name {0}");
+
+    internal static Diagnostic DiagDuplicateStorageName(ISourceFile source, ASTDeclaration prevDecl, ASTDeclaration newDecl) =>
+        TypeDuplicateStorageName.Create([prevDecl.Name], [new(source, prevDecl.Range), new(source, newDecl.Range)]);
 }

@@ -7,7 +7,7 @@ using System.Collections.Generic.Polyfill;
 
 namespace Mlang;
 
-public class CodeWriter : IDisposable
+internal class CodeWriter : IDisposable
 {
     private readonly CodeWriter? parent;
     private readonly TextWriter writer;

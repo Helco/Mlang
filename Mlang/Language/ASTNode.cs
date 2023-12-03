@@ -11,11 +11,6 @@ internal interface IASTVisitor
     void Visit(ASTNode node);
 }
 
-internal interface IOptionValueSet
-{
-    bool TryGetValue(string name, out uint value);
-}
-
 internal abstract class ASTNode
 {
     public required TextRange Range { get; init; }
@@ -52,6 +47,7 @@ internal abstract class ASTStatement : ASTNode
 
 internal abstract class ASTType : ASTNode
 {
+    public abstract bool IsBindingType { get; }
 }
 
 internal abstract class ASTGlobalBlock : ASTNode
@@ -61,6 +57,15 @@ internal abstract class ASTGlobalBlock : ASTNode
 internal abstract class ASTConditionalGlobalBlock : ASTGlobalBlock
 {
     public required ASTExpression? Condition { get; init; }
+
+    public bool EvaluateCondition(IOptionValueSet optionValues)
+    {
+        if (Condition == null)
+            return true;
+        if (!Condition.TryOptionEvaluate(optionValues!, out var value))
+            throw new InvalidOperationException("Condition was not evaluable, semantic analysis failed to catch this");
+        return value != 0;
+    }
 }
 
 internal class ASTOption : ASTGlobalBlock

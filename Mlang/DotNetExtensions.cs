@@ -19,4 +19,7 @@ internal static class DotNetExtensions
 
     public static IEnumerable<(T1, T2)> Zip<T1, T2>(this IEnumerable<T1> set1, IEnumerable<T2> set2) =>
         set1.Zip(set2, (a, b) => (a, b));
+
+    public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> pair, out TKey key, out TValue value) =>
+        (key, value) = (pair.Key, pair.Value);
 }

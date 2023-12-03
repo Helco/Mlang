@@ -4,15 +4,15 @@ using System.IO;
 using System.Linq;
 using Yoakke.SynKit.Lexer;
 using Yoakke.SynKit.Text;
-using TextRange = Yoakke.SynKit.Text.Range;
 
 using static Mlang.Diagnostics;
 
 namespace Mlang.Language;
 
-public class Compiler
+public partial class Compiler
 {
     internal const int MaxVariantBits = 16;
+    internal const string IsInstancedOptionName = "IsInstanced";
 
     private readonly SourceFile sourceFile;
     private readonly Lexer lexer;
@@ -60,6 +60,7 @@ public class Compiler
             CheckVariantSpace();
             CheckNamedOptionValues();
             CheckOptionConditions();
+            CheckSpecialOptions();
         }
         catch (Exception e)
 #if DEBUG
@@ -130,6 +131,23 @@ public class Compiler
                 diagnostics.Add(DiagOptionConditionNotEvaluable(sourceFile, block.Condition.Range));
             else if (!optionValueSet.AccessedOption)
                 diagnostics.Add(DiagOptionConditionIsConstant(sourceFile, block.Condition.Range, value));
+        }
+    }
+
+    private void CheckSpecialOptions()
+    {
+        if (unit == null)
+            return;
+
+        var isInstanced = unit.Blocks.OfType<ASTOption>().FirstOrDefault(b => b.Name == IsInstancedOptionName);
+        if (isInstanced?.NamedValues != null)
+            diagnostics.Add(DiagSpecialOptionWithValues(sourceFile, isInstanced));
+
+        if (isInstanced == null)
+        {
+            var instancesBlock = unit.Blocks.FirstOrDefault(b => b is ASTStorageBlock { StorageKind: TokenKind.KwInstances });
+            if (instancesBlock != null)
+                diagnostics.Add(DiagInstancesBlockWithoutOption(sourceFile, instancesBlock.Range));
         }
     }
 }

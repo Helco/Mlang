@@ -12,26 +12,31 @@ internal abstract class ASTSimpleType<T> : ASTType
 
 internal class ASTNumericType : ASTSimpleType<NumericType>
 {
+    public override bool IsBindingType => false;
     public override void Write(CodeWriter writer) => writer.Write(Type.GLSLName);
 }
 
 internal class ASTImageType : ASTSimpleType<ImageType>
 {
+    public override bool IsBindingType => true;
     public override void Write(CodeWriter writer) => writer.Write(Type.GLSLName);
 }
 
 internal class ASTSamplerType : ASTSimpleType<SamplerType>
 {
+    public override bool IsBindingType => true;
     public override void Write(CodeWriter writer) => writer.Write(Type.AsGLSLName());
 }
 
 internal class ASTCustomType : ASTSimpleType<string>
 {
+    public override bool IsBindingType => false;
     public override void Write(CodeWriter writer) => writer.Write(Type);
 }
 
 internal class ASTBufferType : ASTType
 {
+    public override bool IsBindingType => true;
     public required ASTType Inner { get; init; }
 
     public override void Visit(IASTVisitor visitor)
@@ -49,6 +54,7 @@ internal class ASTBufferType : ASTType
 
 internal class ASTArrayType : ASTType
 {
+    public override bool IsBindingType => false;
     public required ASTType Element { get; init; }
     public required ASTExpression? Size { get; init; }
 
