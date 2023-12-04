@@ -111,7 +111,7 @@ vertex
 fragment
 {
     vec4 color = texture(sampler2D(mainTexture, mainSampler), varUV)
-		* weighColor(varColor, inVectorColorFactor)
+		* weighColor(varColor, inVertexColorFactor)
 		* weighColor(inTint, inTintFactor);
 	if (color.a < inAlphaReference)
 		discard;
@@ -132,8 +132,10 @@ fragment
 
         if (!compiler.HasError)
         {
-            using var writer = new Mlang.CodeWriter(Console.Out, disposeWriter: false);
-            compiler.unit!.Write(writer);
+            Console.WriteLine(compiler.CompileVariant(new Dictionary<string, uint>()
+            {
+                { "IsInstanced", 1u }
+            }));
         }
     }
 }

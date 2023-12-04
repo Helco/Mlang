@@ -28,7 +28,9 @@ partial class Compiler
         if (vertexStageBlock == null || fragmentStageBlock == null)
             return;
 
-        var transferredInstanceVars = FindUsedInstanceVariables(fragmentStageBlock, optionValues);
+        var transferredInstanceVars = isInstanced
+            ? FindUsedInstanceVariables(fragmentStageBlock, optionValues)
+            : new();
 
         // Write preamble
         using var vertexWriter = new CodeWriter(vertexTextWriter, disposeWriter: false);
@@ -54,8 +56,8 @@ partial class Compiler
                     break;
                 case TokenKind.KwInstances when isInstanced:
                     WriteGLSLAttributes(vertexWriter, block);
-                    WriteGLSLInstanceVarying(vertexWriter, transferredInstanceVars, isOutput: true);
-                    WriteGLSLInstanceVarying(fragmentWriter, transferredInstanceVars, isOutput: false);
+                    WriteGLSLInstanceVarying(vertexWriter, block, transferredInstanceVars, isOutput: true);
+                    WriteGLSLInstanceVarying(fragmentWriter, block, transferredInstanceVars, isOutput: false);
                     break;
                 case TokenKind.KwInstances when !isInstanced:
                     WriteGLSLUniform(vertexWriter, block);
@@ -153,16 +155,40 @@ partial class Compiler
     private void WriteGLSLVarying(CodeWriter writer, ASTStorageBlock block, bool isOutput) =>
         WriteGLSLStorageBlock(writer, block, isOutput ? "out" : "in");
 
-    private void WriteGLSLUniform(CodeWriter writer, ASTStorageBlock block) =>
-        WriteGLSLStorageBlock(writer, block, "uniform");
-
-    private void WriteGLSLInstanceVarying(CodeWriter writer, HashSet<ASTDeclaration> usedVariables, bool isOutput)
+    private void WriteGLSLUniform(CodeWriter writer, ASTStorageBlock block)
     {
-        foreach (var decl in usedVariables)
+        foreach (var decl in block.Declarations.Where(d => d.Type.IsBindingType))
+            WriteGLSLDeclaration(writer, decl, "uniform", asStatement: true);
+        var nonBindings = block.Declarations.Where(d => !d.Type.IsBindingType);
+        if (nonBindings.Any())
+        {
+            writer.Write("uniform block_");
+            writer.Write(block.Range.Start.Line);
+            writer.Write('_');
+            writer.Write(block.Range.Start.Column);
+            writer.WriteLine(" {");
+            using var indented = writer.Indented;
+            foreach (var decl in nonBindings)
+                WriteGLSLDeclaration(indented, decl, prefix: "", asStatement: true);
+            writer.WriteLine("}");
+        }
+        writer.WriteLine();
+    }
+
+    private void WriteGLSLInstanceVarying(CodeWriter writer, ASTStorageBlock block, HashSet<ASTDeclaration> usedVariables, bool isOutput)
+    {
+        foreach (var decl in block.Declarations.Where(usedVariables.Contains))
             WriteGLSLDeclaration(writer, decl,
                 prefix: isOutput ? "out" : "in",
                 asStatement: true,
                 overrideName: isOutput ? TransferredInstancePrefix + decl.Name : decl.Name);
+        writer.WriteLine();
+    }
+
+    private void WriteGLSLStorageBlock(CodeWriter writer, ASTStorageBlock block, string prefix)
+    {
+        foreach (var decl in block.Declarations)
+            WriteGLSLDeclaration(writer, decl, prefix, asStatement: true);
         writer.WriteLine();
     }
 
@@ -175,27 +201,6 @@ partial class Compiler
         writer.Write(' ');
         writer.Write(name);
         writer.WriteLine(";");
-    }
-
-    private void WriteGLSLStorageBlock(CodeWriter writer, ASTStorageBlock block, string prefix)
-    {
-        foreach (var decl in block.Declarations.Where(d => d.Type.IsBindingType))
-            WriteGLSLDeclaration(writer, decl, prefix, asStatement: true);
-        var nonBindings = block.Declarations.Where(d => !d.Type.IsBindingType);
-        if (nonBindings.Any())
-        {
-            writer.Write(prefix);
-            writer.Write(" block_");
-            writer.Write(block.Range.Start.Line);
-            writer.Write('_');
-            writer.Write(block.Range.Start.Column);
-            writer.WriteLine(" {");
-            using var indented = writer.Indented;
-            foreach (var decl in nonBindings)
-                WriteGLSLDeclaration(indented, decl, prefix: "", asStatement: true);
-            writer.WriteLine("}");
-        }
-        writer.WriteLine();
     }
 
     private void WriteGLSLDeclaration(CodeWriter writer, ASTDeclaration declaration, string prefix, bool asStatement, string? overrideName = null)
@@ -257,7 +262,7 @@ partial class Compiler
         writer.WriteLine("void main() {");
         using var indented = writer.Indented;
 
-        if (transferredVars != null)
+        if (transferredVars?.Count > 0)
         {
             foreach (var decl in transferredVars)
             {

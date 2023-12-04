@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Mlang.Model;
 using Yoakke.SynKit.Lexer;
 using Yoakke.SynKit.Text;
 
@@ -71,6 +72,34 @@ public partial class Compiler
         }
 
         return !HasError;
+    }
+
+    public string? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null)
+    {
+        if (!ParseShader())
+            return null;
+
+        var userOptionValues = new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>());
+        var optionValues = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), userOptionValues);
+        var pipelineState = ComposePipelineState(optionValues);
+
+        using var vertexGLSL = new StringWriter();
+        using var fragmentGLSL = new StringWriter();
+        WriteGLSL(pipelineState, vertexGLSL, fragmentGLSL, optionValues);
+
+        return vertexGLSL.ToString() + "\n------------------------------------\n\n" + fragmentGLSL.ToString();
+    }
+
+    private PipelineState ComposePipelineState(IOptionValueSet optionValues)
+    {
+        var state = PipelineState.GetDefault(1);
+        foreach (var block in unit!.Blocks.OfType<ASTPipelineBlock>())
+        {
+            if (!block.EvaluateCondition(optionValues))
+                continue;
+            state = state.With(block.State);
+        }
+        return state;
     }
 
     private void CheckVariantSpace()
