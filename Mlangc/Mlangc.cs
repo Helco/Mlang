@@ -1,4 +1,5 @@
-﻿using Mlang.Language;
+﻿using System.Text;
+using Mlang.Language;
 using Yoakke.SynKit.Reporting.Present;
 using Yoakke.SynKit.Text;
 
@@ -126,16 +127,22 @@ fragment
         Console.Write("Parsing...");
         Console.WriteLine(compiler.ParseShader() ? "success" : "failure");
 
+        var variant = compiler.CompileVariant(new Dictionary<string, uint>()
+        {
+            { "IsInstanced", 1u }
+        });
+
         var presenter = new TextDiagnosticsPresenter(Console.Error);
         foreach (var diagnostic in compiler.Diagnostics)
             presenter.Present(diagnostic.ConvertToSynKit());
 
-        if (!compiler.HasError)
+        if (!compiler.HasError && variant != null)
         {
-            Console.WriteLine(compiler.CompileVariant(new Dictionary<string, uint>()
-            {
-                { "IsInstanced", 1u }
-            }));
+            Console.WriteLine(variant.VariantKey.ToString());
+            Console.WriteLine();
+            Console.WriteLine(Encoding.UTF8.GetString(variant.VertexShader));
+            Console.WriteLine();
+            Console.WriteLine(Encoding.UTF8.GetString(variant.FragmentShader));
         }
     }
 }
