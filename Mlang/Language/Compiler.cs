@@ -16,7 +16,6 @@ internal interface IDownstreamCompilationResult
     bool HasError { get; }
     IReadOnlyCollection<Diagnostic> Diagnostics { get; }
     ReadOnlySpan<byte> Result { get; }
-    uint CompilerHash { get; }
 }
 
 internal interface IDownstreamCompiler
@@ -115,12 +114,12 @@ public partial class Compiler : IDisposable
         WriteGLSL(pipelineState, vertexGLSL, fragmentGLSL, optionValues);
 
         var macros = CollectMacros(optionValues);
-        var vertexBytes = CompileStage(vertexGLSL.ToString(), TokenKind.KwVertex, macros, out var compilerHash);
-        var fragmentBytes = CompileStage(fragmentGLSL.ToString(), TokenKind.KwVertex, macros, out _);
+        var vertexBytes = CompileStage(vertexGLSL.ToString(), TokenKind.KwVertex, macros);
+        var fragmentBytes = CompileStage(fragmentGLSL.ToString(), TokenKind.KwFragment, macros);
 
         var shaderHash = HashShaderSource();
         var optionBits = CollectOptionBits(optionValues);
-        var variantKey = new ShaderVariantKey(shaderHash, optionBits, compilerHash);
+        var variantKey = new ShaderVariantKey(shaderHash, optionBits);
         return HasError ? null : new(variantKey, pipelineState, vertexBytes!, fragmentBytes!);
     }
 
@@ -153,11 +152,9 @@ public partial class Compiler : IDisposable
     private byte[]? CompileStage(
         string source,
         TokenKind stageKind,
-        KeyValuePair<string, string>[] macros,
-        out uint compilerHash)
+        KeyValuePair<string, string>[] macros)
     {
         var result = downstreamCompiler.Compile(source, stageKind, macros, extraDownstreamOptions);
-        compilerHash = result.CompilerHash;
         diagnostics.AddRange(result.Diagnostics);
         return result.HasError ? null : result.Result.ToArray();
     }

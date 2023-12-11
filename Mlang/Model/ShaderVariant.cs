@@ -13,12 +13,11 @@ public interface IShaderVariantKeyable
 
 public readonly record struct ShaderVariantKey(
     uint ShaderHash,
-    uint OptionBits,
-    uint CompilerHash)
+    uint OptionBits)
     : IShaderVariantKeyable
 {
     public ShaderVariantKey VariantKey => this;
-    public override string ToString() => $"{ShaderHash:X8}_{OptionBits:X8}_{CompilerHash:X8}";
+    public override string ToString() => $"{ShaderHash:X8}_{OptionBits:X8}";
 }
 
 public class ShaderVariant : IShaderVariantKeyable

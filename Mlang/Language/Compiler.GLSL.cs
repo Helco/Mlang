@@ -10,7 +10,7 @@ namespace Mlang.Language;
 
 partial class Compiler
 {
-    private const string TransferredInstancePrefix = "__instance_";
+    private const string TransferredInstancePrefix = "instance_";
 
     private void WriteGLSL(
         PipelineState pipeline,
@@ -170,7 +170,7 @@ partial class Compiler
             using var indented = writer.Indented;
             foreach (var decl in nonBindings)
                 WriteGLSLDeclaration(indented, decl, prefix: "", asStatement: true);
-            writer.WriteLine("}");
+            writer.WriteLine("};");
         }
         writer.WriteLine();
     }
