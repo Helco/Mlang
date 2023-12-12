@@ -8,7 +8,7 @@ namespace Mlang.Language;
 internal class MlangOutputVisitor : IASTVisitor
 {
     private readonly Stack<CodeWriter> writerStack = new();
-    private CodeWriter writer => writerStack.Peek();
+    public CodeWriter Writer => writerStack.Peek();
 
     public MlangOutputVisitor(CodeWriter writer)
     {
@@ -63,67 +63,67 @@ internal class MlangOutputVisitor : IASTVisitor
     private void WriteBracketed(ASTExpression expr, bool bracketed)
     {
         if (bracketed)
-            writer.Write('(');
+            Writer.Write('(');
         expr.Visit(this);
         if (bracketed)
-            writer.Write(')');
+            Writer.Write(')');
     }
 
     private bool Write(ASTIntegerLiteral literal)
     {
-        writer.Write(literal.Value);
+        Writer.Write(literal.Value);
         return true;
     }
 
     private bool Write(ASTRealLiteral literal)
     {
-        writer.Write(literal.Value);
-        writer.Write('f');
+        Writer.Write(literal.Value);
+        Writer.Write('f');
         return true;
     }
 
     private bool Write(ASTVariable variable)
     {
-        writer.Write(variable.Name);
+        Writer.Write(variable.Name);
         return true;
     }
 
     private bool Write(ASTFunctionCall call)
     {
         call.Function.Visit(this);
-        writer.Write('(');
+        Writer.Write('(');
         if (call.Parameters.Any())
             call.Parameters.First().Visit(this);
         foreach (var param in call.Parameters.Skip(1))
         {
-            writer.Write(", ");
+            Writer.Write(", ");
             param.Visit(this);
         }
-        writer.Write(')');
+        Writer.Write(')');
         return false;
     }
 
     private bool Write(ASTArrayAccess arr)
     {
         arr.Array.Visit(this);
-        writer.Write('[');
+        Writer.Write('[');
         arr.Index.Visit(this);
-        writer.Write(']');
+        Writer.Write(']');
         return false;
     }
 
     private bool Write(ASTMemberAccess mem)
     {
         mem.Parent.Visit(this);
-        writer.Write('.');
-        writer.Write(mem.Member);
+        Writer.Write('.');
+        Writer.Write(mem.Member);
         return false;
     }
 
     private bool Write(ASTPostUnaryExpression un)
     {
         un.Operand.Visit(this);
-        writer.Write(un.Operator switch
+        Writer.Write(un.Operator switch
         {
             TokenKind.Increment => "++",
             TokenKind.Decrement => "--",
@@ -134,7 +134,7 @@ internal class MlangOutputVisitor : IASTVisitor
 
     private bool Write(ASTUnaryExpression un)
     {
-        writer.Write(un.Operator switch
+        Writer.Write(un.Operator switch
         {
             TokenKind.Increment => "++",
             TokenKind.Decrement => "--",
@@ -152,8 +152,8 @@ internal class MlangOutputVisitor : IASTVisitor
         WriteBracketed(bin.Left, bin.Precedence < bin.Left.Precedence);
 
         if (bin.Operator != TokenKind.Comma)
-            writer.Write(' ');
-        writer.Write(bin.Operator switch
+            Writer.Write(' ');
+        Writer.Write(bin.Operator switch
         {
             TokenKind.Multiplicate => "*",
             TokenKind.Divide => "/",
@@ -183,7 +183,7 @@ internal class MlangOutputVisitor : IASTVisitor
             TokenKind.Comma => ",",
             _ => throw new InvalidOperationException("Invalid operator in BinaryExpression")
         });
-        writer.Write(' ');
+        Writer.Write(' ');
 
         WriteBracketed(bin.Right, bin.Precedence <= bin.Right.Precedence);
         return false;
@@ -192,17 +192,17 @@ internal class MlangOutputVisitor : IASTVisitor
     private bool Write(ASTConditional cond)
     {
         cond.Condition.Visit(this);
-        writer.Write(" ? ");
+        Writer.Write(" ? ");
         cond.Then.Visit(this);
-        writer.Write(" : ");
+        Writer.Write(" : ");
         cond.Else.Visit(this);
         return false;
     }
     #endregion
 
     #region Statements
-    private void PushIndent() => writerStack.Push(writer.Indented);
-    private void PopIndent() => writerStack.Pop().Dispose();
+    public void PushIndent() => writerStack.Push(Writer.Indented);
+    public void PopIndent() => writerStack.Pop().Dispose();
 
     private void WriteAsNewScope(ASTStatement stmt)
     {
@@ -218,41 +218,41 @@ internal class MlangOutputVisitor : IASTVisitor
 
     private bool Write(ASTEmptyStatement _)
     {
-        writer.WriteLine(';');
+        Writer.WriteLine(';');
         return true;
     }
 
     private bool Write(ASTDeclarationStatement stmt)
     {
         stmt.Type.Visit(this);
-        writer.Write(' ');
+        Writer.Write(' ');
         if (stmt.Declarations.Any())
             WriteWithoutType(stmt.Declarations.First());
         foreach (var declaration in stmt.Declarations.Skip(1))
         {
-            writer.Write(", ");
+            Writer.Write(", ");
             WriteWithoutType(declaration);
         }
-        writer.WriteLine(";");
+        Writer.WriteLine(";");
         return false;
     }
 
     private bool Write(ASTExpressionStatement stmt)
     {
         stmt.Expression.Visit(this);
-        writer.WriteLine(';');
+        Writer.WriteLine(';');
         return false;
     }
 
     private bool Write(ASTSelection sel)
     {
-        writer.Write("if (");
+        Writer.Write("if (");
         sel.Condition.Visit(this);
-        writer.WriteLine(")");
+        Writer.WriteLine(")");
         WriteAsNewScope(sel.Then);
         if (sel.Else != null)
         {
-            writer.WriteLine("else");
+            Writer.WriteLine("else");
             WriteAsNewScope(sel.Else);
         }
         return false;
@@ -260,81 +260,81 @@ internal class MlangOutputVisitor : IASTVisitor
 
     private bool Write(ASTSwitchStatement stmt)
     {
-        writer.Write("switch (");
+        Writer.Write("switch (");
         stmt.Value.Visit(this);
-        writer.WriteLine(")");
-        writer.WriteLine("{");
+        Writer.WriteLine(")");
+        Writer.WriteLine("{");
         foreach (var body in stmt.Body)
             WriteAsNewScope(body);
-        writer.WriteLine("}");
+        Writer.WriteLine("}");
         return false;
     }
 
     private bool Write(ASTCaseLabel label)
     {
-        writer.Write("case ");
+        Writer.Write("case ");
         WriteBracketed(label.Value, label.Value is not (ASTIntegerLiteral or ASTRealLiteral or ASTVariable));
-        writer.WriteLine(":");
+        Writer.WriteLine(":");
         return false;
     }
 
     private bool Write(ASTDefaultLabel _)
     {
-        writer.WriteLine("default:");
+        Writer.WriteLine("default:");
         return true;
     }
 
     private bool Write(ASTForLoop loop)
     {
-        writer.Write("for (");
+        Writer.Write("for (");
         loop.Init.Visit(this); // TODO: Fix new-line in for loops
-        writer.Write(' ');
+        Writer.Write(' ');
         loop.Condition.Visit(this);
-        writer.Write(';');
+        Writer.Write(';');
         if (loop.Update != null)
         {
-            writer.Write(' ');
+            Writer.Write(' ');
             loop.Update.Visit(this);
         }
-        writer.WriteLine(')');
+        Writer.WriteLine(')');
         WriteAsNewScope(loop.Body);
         return false;
     }
 
     private bool Write(ASTWhileLoop loop)
     {
-        writer.Write("while (");
+        Writer.Write("while (");
         loop.Condition.Visit(this);
-        writer.WriteLine(")");
+        Writer.WriteLine(")");
         WriteAsNewScope(loop.Body);
         return false;
     }
 
     private bool Write(ASTDoWhileLoop loop)
     {
-        writer.WriteLine("do");
+        Writer.WriteLine("do");
         WriteAsNewScope(loop.Body);
-        writer.Write("while (");
+        Writer.Write("while (");
         loop.Condition.Visit(this);
-        writer.WriteLine(");");
+        Writer.WriteLine(");");
         return false;
     }
 
     private bool Write(ASTReturn ret)
     {
-        writer.Write("return");
+        Writer.Write("return");
         if (ret.Value != null)
         {
-            writer.Write(' ');
+            Writer.Write(' ');
             ret.Value.Visit(this);
         }
-        writer.WriteLine(";");
+        Writer.WriteLine(";");
         return false;
     }
 
     private bool Write(ASTFlowStatement stmt)
     {
-        writer.WriteLine(stmt.Instruction switch
+        Writer.WriteLine(stmt.Instruction switch
         {
             TokenKind.KwBreak => "break;",
             TokenKind.KwContinue => "continue;",
@@ -348,16 +348,16 @@ internal class MlangOutputVisitor : IASTVisitor
     {
         if (scope.Body.None())
         {
-            writer.WriteLine("{ }");
+            Writer.WriteLine("{ }");
             return false;
         }
 
-        writer.WriteLine("{");
+        Writer.WriteLine("{");
         PushIndent();
         foreach (var body in scope.Body)
             body.Visit(this);
         PopIndent();
-        writer.WriteLine("}");
+        Writer.WriteLine("}");
         return false;
     }
     #endregion
@@ -365,49 +365,49 @@ internal class MlangOutputVisitor : IASTVisitor
     #region Declarations
     private bool Write(ASTNumericType type)
     {
-        writer.Write(type.Type.MlangName);
+        Writer.Write(type.Type.MlangName);
         return false;
     }
 
     private bool Write(ASTImageType type)
     {
-        writer.Write(type.Type.ToString());
+        Writer.Write(type.Type.ToString());
         return false;
     }
 
     private bool Write(ASTSamplerType type)
     {
-        writer.Write(type.Type.AsGLSLName());
+        Writer.Write(type.Type.AsGLSLName());
         return false;
     }
 
     private bool Write(ASTCustomType type)
     {
-        writer.Write(type.Type);
+        Writer.Write(type.Type);
         return false;
     }
 
     private bool Write(ASTBufferType _)
     {
-        writer.Write("buffer ");
+        Writer.Write("buffer ");
         return true;
     }
 
     private bool Write(ASTArrayType type)
     {
         type.Element.Visit(this);
-        writer.Write('[');
+        Writer.Write('[');
         type.Size?.Visit(this);
-        writer.Write(']');
+        Writer.Write(']');
         return false;
     }
 
     private void WriteWithoutType(ASTDeclaration decl)
     {
-        writer.Write(decl.Name);
+        Writer.Write(decl.Name);
         if (decl.Initializer != null)
         {
-            writer.Write(" = ");
+            Writer.Write(" = ");
             decl.Initializer.Visit(this);
         }
     }
@@ -415,7 +415,7 @@ internal class MlangOutputVisitor : IASTVisitor
     private bool Write(ASTDeclaration decl)
     {
         decl.Type.Visit(this);
-        writer.Write(' ');
+        Writer.Write(' ');
         WriteWithoutType(decl);
         return false;
     }
@@ -423,36 +423,36 @@ internal class MlangOutputVisitor : IASTVisitor
     private bool Write(ASTFunction func)
     {
         if (func.ReturnType == null)
-            writer.Write("void");
+            Writer.Write("void");
         else
             func.ReturnType.Visit(this);
-        writer.Write(' ');
-        writer.Write(func.Name);
-        writer.Write('(');
+        Writer.Write(' ');
+        Writer.Write(func.Name);
+        Writer.Write('(');
 
         if (func.Parameters.Any())
             func.Parameters.First().Visit(this);
         foreach (var param in func.Parameters.Skip(1))
         {
-            writer.Write(", ");
+            Writer.Write(", ");
             param.Visit(this);
         }
-        writer.Write(')');
+        Writer.Write(')');
 
         if (func.Body == null)
-            writer.WriteLine(";");
+            Writer.WriteLine(";");
         else
         {
-            writer.WriteLine();
+            Writer.WriteLine();
             WriteAsNewScope(func.Body);
         }
-        writer.WriteLine();
+        Writer.WriteLine();
         return false;
     }
 
     private bool Write(ASTStorageBlock block)
     {
-        writer.Write(block.StorageKind switch
+        Writer.Write(block.StorageKind switch
         {
             TokenKind.KwAttributes => "attributes",
             TokenKind.KwInstances => "instances",
@@ -462,96 +462,96 @@ internal class MlangOutputVisitor : IASTVisitor
         });
         if (block.Condition != null)
         {
-            writer.Write(" if (");
+            Writer.Write(" if (");
             block.Condition.Visit(this);
-            writer.Write(')');
+            Writer.Write(')');
         }
 
         if (block.Declarations.Length == 1)
         {
-            writer.Write(' ');
+            Writer.Write(' ');
             block.Declarations.Single().Visit(this);
-            writer.WriteLine(';');
+            Writer.WriteLine(';');
         }
         else
         {
-            writer.WriteLine();
-            writer.WriteLine('{');
+            Writer.WriteLine();
+            Writer.WriteLine('{');
             PushIndent();
             foreach (var decl in block.Declarations)
             {
                 decl.Visit(this);
-                writer.WriteLine(';');
+                Writer.WriteLine(';');
             }
             PopIndent();
-            writer.WriteLine('}');
+            Writer.WriteLine('}');
         }
-        writer.WriteLine();
+        Writer.WriteLine();
         return false;
     }
 
     private bool Write(ASTStageBlock block)
     {
-        writer.WriteLine(block.Stage switch
+        Writer.WriteLine(block.Stage switch
         {
             TokenKind.KwVertex => "vertex",
             TokenKind.KwFragment => "fragment",
             _ => throw new InvalidOperationException("Invalid stage kind in StageBlock")
         });
-        writer.WriteLine("{");
+        Writer.WriteLine("{");
         PushIndent();
         foreach (var func in block.Functions)
         {
             func.Visit(this);
-            writer.WriteLine();
+            Writer.WriteLine();
         }
         foreach (var stmt in block.Statements)
         {
             stmt.Visit(this);
         }
         PopIndent();
-        writer.WriteLine("}");
-        writer.WriteLine();
+        Writer.WriteLine("}");
+        Writer.WriteLine();
         return false;
     }
 
     private bool Write(ASTPipelineBlock block)
     {
         if (block.Condition == null)
-            writer.WriteLine("pipeline");
+            Writer.WriteLine("pipeline");
         else
         {
-            writer.Write("pipeline if (");
+            Writer.Write("pipeline if (");
             block.Condition.Visit(this);
-            writer.WriteLine(")");
+            Writer.WriteLine(")");
         }
 
-        writer.WriteLine("{");
+        Writer.WriteLine("{");
         PushIndent();
         // TODO: Implement this
-        writer.WriteLine("// Writing pipeline states is not yet implemented");
+        Writer.WriteLine("// Writing pipeline states is not yet implemented");
         PopIndent();
-        writer.WriteLine("}");
-        writer.WriteLine();
+        Writer.WriteLine("}");
+        Writer.WriteLine();
         return false;
     }
 
     private bool Write(ASTOption option)
     {
-        writer.Write("option ");
-        writer.Write(option.Name);
+        Writer.Write("option ");
+        Writer.Write(option.Name);
         if (option.NamedValues != null)
         {
-            writer.Write(" = ");
-            writer.Write(option.NamedValues.First());
+            Writer.Write(" = ");
+            Writer.Write(option.NamedValues.First());
             foreach (var value in option.NamedValues.Skip(1))
             {
-                writer.Write(", ");
-                writer.Write(value);
+                Writer.Write(", ");
+                Writer.Write(value);
             }
         }
-        writer.WriteLine(";");
-        writer.WriteLine();
+        Writer.WriteLine(";");
+        Writer.WriteLine();
         return true;
     }
     #endregion

@@ -137,9 +137,6 @@ fragment
         foreach (var diagnostic in compiler.Diagnostics)
             presenter.Present(diagnostic.ConvertToSynKit());
 
-        using var writer = new CodeWriter(Console.Out, disposeWriter: false);
-        compiler.unit.Visit(new MlangOutputVisitor(writer));
-
         if (!compiler.HasError && variant != null)
         {
             Console.WriteLine(variant.VariantKey.ToString());

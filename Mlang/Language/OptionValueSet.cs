@@ -9,6 +9,15 @@ internal interface IOptionValueSet
     bool TryGetValue(string name, out uint value);
 }
 
+internal static class IOptionValueSetExtensions
+{
+    public static uint GetValue(this IOptionValueSet set, string name) =>
+        set.TryGetValue(name, out var value) ? value
+        : throw new ArgumentException($"Could not retrieve option value {name}");
+
+    public static bool GetBool(this IOptionValueSet set, string name) => set.GetValue(name) != 0;
+}
+
 internal class DictionaryOptionValueSet : IOptionValueSet
 {
     private readonly IReadOnlyDictionary<string, uint> values;
