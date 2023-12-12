@@ -205,6 +205,7 @@ partial class Compiler
 
     private void WriteGLSLDeclaration(CodeWriter writer, ASTDeclaration declaration, string prefix, bool asStatement, string? overrideName = null)
     {
+        var mlangVisitor = new MlangOutputVisitor(writer);
         if (!string.IsNullOrWhiteSpace(prefix))
         {
             writer.Write(prefix);
@@ -216,7 +217,7 @@ partial class Compiler
         if (declaration.Type is ASTArrayType array)
         {
             writer.Write('[');
-            array.Size?.Write(writer);
+            array.Size?.Visit(mlangVisitor);
             writer.Write(']');
         }
         if (declaration.Type is ASTBufferType)
@@ -224,7 +225,7 @@ partial class Compiler
         if (declaration.Initializer != null)
         {
             writer.Write(" = ");
-            declaration.Initializer.Write(writer);
+            declaration.Initializer.Visit(mlangVisitor);
         }
         if (asStatement)
             writer.WriteLine(';');
@@ -254,7 +255,8 @@ partial class Compiler
     private void WriteGLSLFunction(CodeWriter writer, ASTFunction function)
     {
         // TODO: This is ignoring the custom types and needs a better implementation of the Mlang Write methods
-        function?.Write(writer);
+        var mlangVisitor = new MlangOutputVisitor(writer);
+        function?.Visit(mlangVisitor);
     }
 
     private void WriteGLSLMainFunction(CodeWriter writer, ASTStageBlock stage, HashSet<ASTDeclaration>? transferredVars)
@@ -275,8 +277,9 @@ partial class Compiler
             }
             indented.WriteLine();
         }
+        var mlangVisitor = new MlangOutputVisitor(indented);
         foreach (var stmt in stage.Statements)
-            stmt.Write(indented);
+            stmt.Visit(mlangVisitor);
 
         writer.WriteLine("}");
         writer.WriteLine();

@@ -13,25 +13,21 @@ internal abstract class ASTSimpleType<T> : ASTType
 internal class ASTNumericType : ASTSimpleType<NumericType>
 {
     public override bool IsBindingType => false;
-    public override void Write(CodeWriter writer) => writer.Write(Type.GLSLName);
 }
 
 internal class ASTImageType : ASTSimpleType<ImageType>
 {
     public override bool IsBindingType => true;
-    public override void Write(CodeWriter writer) => writer.Write(Type.GLSLName);
 }
 
 internal class ASTSamplerType : ASTSimpleType<SamplerType>
 {
     public override bool IsBindingType => true;
-    public override void Write(CodeWriter writer) => writer.Write(Type.AsGLSLName());
 }
 
 internal class ASTCustomType : ASTSimpleType<string>
 {
     public override bool IsBindingType => false;
-    public override void Write(CodeWriter writer) => writer.Write(Type);
 }
 
 internal class ASTBufferType : ASTType
@@ -41,14 +37,8 @@ internal class ASTBufferType : ASTType
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Inner.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("buffer ");
-        Inner.Write(writer);
+        if (visitor.Visit(this))
+            Inner.Visit(visitor);
     }
 }
 
@@ -60,17 +50,10 @@ internal class ASTArrayType : ASTType
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Element.Visit(visitor);
         Size?.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Element.Write(writer);
-        writer.Write('[');
-        Size?.Write(writer);
-        writer.Write(']');
     }
 }
 
@@ -82,26 +65,10 @@ internal class ASTDeclaration : ASTNode
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Type.Visit(visitor);
         Initializer?.Visit(visitor);
-    }
-
-    public void WriteWithoutType(CodeWriter writer)
-    {
-        writer.Write(Name);
-        if (Initializer != null)
-        {
-            writer.Write(" = ");
-            Initializer.Write(writer);
-        }
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Type.Write(writer);
-        writer.Write(' ');
-        WriteWithoutType(writer);
     }
 }
 
@@ -114,39 +81,12 @@ internal class ASTFunction : ASTGlobalBlock
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         ReturnType?.Visit(visitor);
         foreach (var param in Parameters)
             param.Visit(visitor);
         Body?.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        if (ReturnType == null)
-            writer.Write("void");
-        else
-            ReturnType.Write(writer);
-        writer.Write(' ');
-        writer.Write(Name);
-        writer.Write('(');
-
-        if (Parameters.Any())
-            Parameters.First().Write(writer);
-        foreach (var param in Parameters.Skip(1))
-        {
-            writer.Write(", ");
-            param.Write(writer);
-        }
-        writer.Write(')');
-
-        if (Body == null)
-            writer.WriteLine(";");
-        else
-        {
-            writer.WriteLine();
-            Body.WriteAsNewScope(writer);
-        }
     }
 }
 
@@ -157,47 +97,11 @@ internal class ASTStorageBlock : ASTConditionalGlobalBlock
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Condition?.Visit(visitor);
         foreach (var decl in Declarations)
             decl.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write(StorageKind switch
-        {
-            TokenKind.KwAttributes => "attributes",
-            TokenKind.KwInstances => "instances",
-            TokenKind.KwUniform => "uniform",
-            TokenKind.KwVarying => "varying",
-            _ => throw new InvalidOperationException("Invalid storage kind in StorageBlock")
-        });
-        if (Condition != null)
-        {
-            writer.Write(" if (");
-            Condition.Write(writer);
-            writer.Write(')');
-        }
-
-        if (Declarations.Length == 1)
-        {
-            writer.Write(' ');
-            Declarations.Single().Write(writer);
-            writer.WriteLine(';');
-        }
-        else
-        {
-            writer.WriteLine();
-            writer.WriteLine('{');
-            using var indented = writer.Indented;
-            foreach (var decl in Declarations)
-            {
-                decl.Write(indented);
-                indented.WriteLine(';');
-            }
-            writer.WriteLine('}');
-        }
     }
 }
 
@@ -209,36 +113,13 @@ internal class ASTStageBlock : ASTConditionalGlobalBlock
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Condition?.Visit(visitor);
         foreach (var func in Functions)
             func.Visit(visitor);
         foreach (var stmt in Statements)
             stmt.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.WriteLine(Stage switch
-        {
-            TokenKind.KwVertex => "vertex",
-            TokenKind.KwFragment => "fragment",
-            _ => throw new InvalidOperationException("Invalid stage kind in StageBlock")
-        });
-        writer.WriteLine("{");
-
-        using var indented = writer.Indented;
-        foreach (var func in Functions)
-        {
-            func.Write(indented);
-            indented.WriteLine();
-        }
-        foreach (var stmt in Statements)
-        {
-            stmt.Write(indented);
-        }
-
-        writer.WriteLine("}");
     }
 }
 
@@ -248,25 +129,20 @@ internal class ASTPipelineBlock : ASTConditionalGlobalBlock
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Condition?.Visit(visitor);
+        if (visitor.Visit(this))
+            Condition?.Visit(visitor);
     }
+}
 
-    public override void Write(CodeWriter writer)
-    {
-        if (Condition == null)
-            writer.WriteLine("pipeline");
-        else
-        {
-            writer.Write("pipeline if (");
-            Condition.Write(writer);
-            writer.WriteLine(")");
-        }
+internal class ASTOption : ASTGlobalBlock
+{
+    public required int Index { get; init; }
+    public required int BitOffset { get; init; }
+    public required string Name { get; init; }
+    public required string[]? NamedValues { get; init; }
+    public int ValueCount => NamedValues?.Length ?? 2;
+    public int BitCount => GetBitCount(ValueCount);
 
-        writer.WriteLine("{");
-        using var indented = writer.Indented;
-        // TODO: Implement this
-        indented.WriteLine("// Writing pipeline states is not yet implemented");
-        writer.WriteLine("}");
-    }
+    public static int GetBitCount(int valueCount) =>
+        (int)Math.Ceiling(Math.Log(valueCount) / Math.Log(2));
 }

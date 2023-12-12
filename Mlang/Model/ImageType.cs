@@ -70,6 +70,8 @@ public readonly record struct ImageType(
         }
     }
 
+    public override string ToString() => GLSLName;
+
     public static bool TryParse(string text, out ImageType type) =>
         TypeNames.TryGetValue(text, out type);
 

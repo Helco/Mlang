@@ -14,20 +14,12 @@ internal class ASTIntegerLiteral : ASTExpression
         value = Value;
         return true;
     }
-
-    public override void Write(CodeWriter writer) => writer.Write(Value.ToString());
 }
 
 internal class ASTRealLiteral : ASTExpression
 {
     public override int Precedence => -3;
     public double Value { get; init; }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write(Value.ToString());
-        writer.Write('f');
-    }
 }
 
 internal class ASTVariable : ASTExpression
@@ -41,8 +33,6 @@ internal class ASTVariable : ASTExpression
         value = intValue;
         return result;
     }
-
-    public override void Write(CodeWriter writer) => writer.Write(Name);
 }
 
 internal class ASTFunctionCall : ASTExpression
@@ -53,24 +43,11 @@ internal class ASTFunctionCall : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Function.Visit(visitor);
         foreach (var param in Parameters)
             param.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Function.Write(writer);
-        writer.Write('(');
-        if (Parameters.Any())
-            Parameters.First().Write(writer);
-        foreach (var param in Parameters.Skip(1))
-        {
-            writer.Write(", ");
-            param.Write(writer);
-        }
-        writer.Write(')');
     }
 }
 
@@ -82,17 +59,10 @@ internal class ASTArrayAccess : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Array.Visit(visitor);
         Index.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Array.Write(writer);
-        writer.Write('[');
-        Index.Write(writer);
-        writer.Write(']');
     }
 }
 
@@ -104,15 +74,8 @@ internal class ASTMemberAccess : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Parent.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Parent.Write(writer);
-        writer.Write('.');
-        writer.Write(Member);
+        if (visitor.Visit(this))
+            Parent.Visit(visitor);
     }
 }
 
@@ -124,19 +87,8 @@ internal class ASTPostUnaryExpression : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Operand.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Operand.Write(writer);
-        writer.Write(Operator switch
-        {
-            TokenKind.Increment => "++",
-            TokenKind.Decrement => "--",
-            _ => throw new InvalidOperationException("Invalid operator in PostUnaryExpression")
-        });
+        if (visitor.Visit(this))
+            Operand.Visit(visitor);
     }
 }
 
@@ -160,23 +112,8 @@ internal class ASTUnaryExpression : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Operand.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write(Operator switch
-        {
-            TokenKind.Increment => "++",
-            TokenKind.Decrement => "--",
-            TokenKind.Add => "+",
-            TokenKind.Subtract => "-",
-            TokenKind.Ampersand => "!",
-            TokenKind.BitNegate => "~",
-            _ => throw new InvalidOperationException("Invalid operator in UnaryExpression")
-        });
-        Operand.Write(writer);
+        if (visitor.Visit(this))
+            Operand.Visit(visitor);
     }
 }
 
@@ -211,50 +148,10 @@ internal class ASTBinaryExpression : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Left.Visit(visitor);
         Right.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Left.WriteBracketed(writer, Precedence < Left.Precedence);
-
-        if (Operator != TokenKind.Comma)
-            writer.Write(' ');
-        writer.Write(Operator switch
-        {
-            TokenKind.Multiplicate => "*",
-            TokenKind.Divide => "/",
-            TokenKind.Modulo => "%",
-            TokenKind.Add => "+",
-            TokenKind.Subtract => "-",
-            TokenKind.BitshiftL => "<<",
-            TokenKind.BitshiftR => ">>",
-            TokenKind.Lesser => "<",
-            TokenKind.Greater => ">",
-            TokenKind.LessOrEquals => "<=",
-            TokenKind.GreaterOrEquals => ">=",
-            TokenKind.Equals => "==",
-            TokenKind.NotEquals => "!=",
-            TokenKind.BitAnd => "&",
-            TokenKind.BitXor => "^",
-            TokenKind.BitOr => "|",
-            TokenKind.LogicalAnd => "&&",
-            TokenKind.LogicalXor => "^^",
-            TokenKind.LogicalOr => "||",
-            TokenKind.Assign => "=",
-            TokenKind.AddAssign => "+=",
-            TokenKind.SubtractAssign => "-=",
-            TokenKind.MultiplicateAssign => "*=",
-            TokenKind.DivideAssign => "/=",
-            TokenKind.ModuloAssign => "%=",
-            TokenKind.Comma => ",",
-            _ => throw new InvalidOperationException("Invalid operator in BinaryExpression")
-        });
-        writer.Write(' ');
-
-        Right.WriteBracketed(writer, Precedence <= Right.Precedence);
     }
 
     private static readonly IReadOnlyDictionary<TokenKind, int> Precedences = new Dictionary<TokenKind, int>()
@@ -296,18 +193,10 @@ internal class ASTConditional : ASTExpression
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Condition.Visit(visitor);
         Then.Visit(visitor);
         Else.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Condition.Write(writer);
-        writer.Write(" ? ");
-        Then.Write(writer);
-        writer.Write(" : ");
-        Else.Write(writer);
     }
 }

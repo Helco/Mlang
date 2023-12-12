@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Mlang;
 using Mlang.Language;
 using Yoakke.SynKit.Reporting.Present;
 using Yoakke.SynKit.Text;
@@ -135,6 +136,9 @@ fragment
         var presenter = new TextDiagnosticsPresenter(Console.Error);
         foreach (var diagnostic in compiler.Diagnostics)
             presenter.Present(diagnostic.ConvertToSynKit());
+
+        using var writer = new CodeWriter(Console.Out, disposeWriter: false);
+        compiler.unit.Visit(new MlangOutputVisitor(writer));
 
         if (!compiler.HasError && variant != null)
         {

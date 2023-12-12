@@ -44,7 +44,7 @@ public readonly record struct NumericType(
 
     public bool IsScalar => Rows == 1 && Columns == 1;
     public bool IsVector => Rows > 1 && Columns == 1;
-    public bool IsMatrix => Rows > 1 && Columns > 1;
+    public bool IsMatrix => Columns != 1;
     public bool IsGLSLCompatible => TryGetGLSLCompatible(out var compatible) && compatible == this;
     
     public bool TryGetGLSLCompatible(out NumericType compatible)
@@ -78,16 +78,13 @@ public readonly record struct NumericType(
                     name.Append('u');
                 name.Append(ScalarWidth == ScalarWidth.DWord ? "int" : "short");
             }
-            if (Rows > 1 || Columns > 1)
+            if (IsVector)
+                name.Append(Rows);
+            else if (IsMatrix)
             {
-                if (Rows == Columns)
-                    name.Append(Rows);
-                else
-                {
-                    name.Append(Columns);
-                    name.Append('x');
-                    name.Append(Rows);
-                }
+                name.Append(Columns);
+                name.Append('x');
+                name.Append(Rows);
             }
             return name.ToString();
         }

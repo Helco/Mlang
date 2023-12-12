@@ -6,7 +6,6 @@ namespace Mlang.Language;
 
 internal class ASTEmptyStatement : ASTStatement
 {
-    public override void Write(CodeWriter writer) => writer.WriteLine(";");
 }
 
 internal class ASTDeclarationStatement : ASTStatement
@@ -16,24 +15,11 @@ internal class ASTDeclarationStatement : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Type.Visit(visitor);
         foreach (var declaration in Declarations.Where(t => t.Initializer != null))
             declaration.Initializer!.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Type.Write(writer);
-        writer.Write(' ');
-        if (Declarations.Any())
-            Declarations.First().WriteWithoutType(writer);
-        foreach (var declaration in Declarations.Skip(1))
-        {
-            writer.Write(", ");
-            declaration.WriteWithoutType(writer);
-        }
-        writer.WriteLine(";");
     }
 }
 
@@ -43,14 +29,8 @@ internal class ASTExpressionStatement : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Expression.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        Expression.Write(writer);
-        writer.WriteLine(";");
+        if (visitor.Visit(this))
+            Expression.Visit(visitor);
     }
 }
 
@@ -62,23 +42,11 @@ internal class ASTSelection : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Condition.Visit(visitor);
         Then.Visit(visitor);
         Else?.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("if (");
-        Condition.Write(writer);
-        writer.WriteLine(")");
-        Then.WriteAsNewScope(writer);
-        if (Else != null)
-        {
-            writer.WriteLine("else");
-            Else.WriteAsNewScope(writer);
-        }
     }
 }
 
@@ -89,22 +57,11 @@ internal class ASTSwitchStatement : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Value.Visit(visitor);
         foreach (var body in Body)
             body.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("switch (");
-        Value.Write(writer);
-        writer.WriteLine(")");
-        writer.WriteLine("{");
-        using var indented = writer.Indented;
-        foreach (var body in Body)
-            body.Write(body is ASTCaseLabel or ASTDefaultLabel ? writer : indented);
-        writer.WriteLine("}");
     }
 }
 
@@ -114,23 +71,14 @@ internal class ASTCaseLabel : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Value.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("case ");
-        Value.WriteBracketed(writer,
-            Value is not (ASTIntegerLiteral or ASTRealLiteral or ASTVariable));
-        writer.WriteLine(":");
+        if (visitor.Visit(this))
+            Value.Visit(visitor);
     }
 }
 
 internal class ASTDefaultLabel : ASTStatement
 {
     public override void Visit(IASTVisitor visitor) => visitor.Visit(this);
-    public override void Write(CodeWriter writer) => writer.WriteLine("default:");
 }
 
 internal class ASTForLoop : ASTStatement
@@ -142,27 +90,12 @@ internal class ASTForLoop : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Init.Visit(visitor);
         Condition.Visit(visitor);
         Update?.Visit(visitor);
         Body.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("for (");
-        Init.Write(writer); // TODO: Fix new-line in for loops
-        writer.Write(' ');
-        Condition.Write(writer);
-        writer.Write(';');
-        if (Update != null)
-        {
-            writer.Write(' ');
-            Update.Write(writer);
-        }
-        writer.WriteLine(')');
-        Body.WriteAsNewScope(writer);
     }
 }
 
@@ -173,29 +106,25 @@ internal class ASTWhileLoop : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         Condition.Visit(visitor);
         Body.Visit(visitor);
     }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("while (");
-        Condition.Write(writer);
-        writer.WriteLine(")");
-        Body.WriteAsNewScope(writer);
-    }
 }
 
-internal class ASTDoWhileLoop : ASTWhileLoop
+internal class ASTDoWhileLoop : ASTStatement
 {
-    public override void Write(CodeWriter writer)
+    // code duplication as it is not much and prevents improper inheritance (a DoWhileLoop is not a WhileLoop)
+    public required ASTExpression Condition { get; init; }
+    public required ASTStatement Body { get; init; }
+
+    public override void Visit(IASTVisitor visitor)
     {
-        writer.WriteLine("do");
-        Body.WriteAsNewScope(writer);
-        writer.Write("while (");
-        Condition.Write(writer);
-        writer.WriteLine(");");
+        if (!visitor.Visit(this))
+            return;
+        Condition.Visit(visitor);
+        Body.Visit(visitor);
     }
 }
 
@@ -205,33 +134,14 @@ internal class ASTReturn : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
-        Value?.Visit(visitor);
-    }
-
-    public override void Write(CodeWriter writer)
-    {
-        writer.Write("return");
-        if (Value != null)
-        {
-            writer.Write(' ');
-            Value.Write(writer);
-        }
-        writer.WriteLine(";");
+        if (visitor.Visit(this))
+            Value?.Visit(visitor);
     }
 }
 
 internal class ASTFlowStatement : ASTStatement
 {
     public required TokenKind Instruction { get; init; }
-
-    public override void Write(CodeWriter writer) => writer.WriteLine(Instruction switch
-    {
-        TokenKind.KwBreak => "break;",
-        TokenKind.KwContinue => "continue;",
-        TokenKind.KwDiscard => "discard;",
-        _ => throw new InvalidOperationException("Invalid instruction in FlowStatement")
-    });
 }
 
 internal class ASTStatementScope : ASTStatement
@@ -240,25 +150,9 @@ internal class ASTStatementScope : ASTStatement
 
     public override void Visit(IASTVisitor visitor)
     {
-        visitor.Visit(this);
+        if (!visitor.Visit(this))
+            return;
         foreach (var body in Body)
             body.Visit(visitor);
     }
-
-    public override void Write(CodeWriter writer)
-    {
-        if (Body.None())
-        {
-            writer.WriteLine("{ }");
-            return;
-        }
-
-        writer.WriteLine("{");
-        using var indented = writer.Indented;
-        foreach (var body in Body)
-            body.Write(indented);
-        writer.WriteLine("}");
-    }
-
-    internal override void WriteAsNewScope(CodeWriter writer) => Write(writer);
 }

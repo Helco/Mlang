@@ -14,9 +14,10 @@ internal class VariableUsageVisitor<TValue> : IASTVisitor
         this.allVariables = allVariables;
     }
 
-    public void Visit(ASTNode node)
+    public bool Visit(ASTNode node)
     {
         if (node is ASTVariable variable && allVariables.ContainsKey(variable.Name))
             UsedVariables.Add(variable.Name);
+        return true;
     }
 }
