@@ -19,6 +19,7 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
     private static readonly DiagnosticCategory CategoryShaderc = new("Shaderc");
     private static readonly DiagnosticType TypeGLSLError = CategoryShaderc.Create(Severity.Error, "{0}");
     private static readonly DiagnosticType TypeGLSLWarning = CategoryShaderc.Create(Severity.Warning, "{0}");
+    private static readonly DiagnosticType TypeGLSLInternalError = CategoryShaderc.Create(Severity.InternalError, "{0}");
     private static readonly DiagnosticType TypeGLSLUnknownSeverity = CategoryShaderc.Create(Severity.Error, "(unknown severity {1}): {0}");
     private static readonly DiagnosticType TypeUnknownError = CategoryShaderc.Create(
         Severity.Error, "No error message, shaderc returned {0}");
@@ -46,7 +47,7 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
             api.CompileOptionsSetOptimizationLevel(compileOptions, OptimizationLevel.Performance);
             api.CompileOptionsSetGenerateDebugInfo(compileOptions);
             api.CompileOptionsSetTargetEnv(compileOptions, TargetEnv.Vulkan, (uint)EnvVersion.Vulkan10);
-            api.CompileOptionsSetTargetSpirv(compileOptions, SpirvVersion.Shaderc15);
+            api.CompileOptionsSetTargetSpirv(compileOptions, SpirvVersion.Shaderc10);
             var utf8Macros = macros.Select(p => (Encoding.UTF8.GetBytes(p.Key), Encoding.UTF8.GetBytes(p.Value))).ToArray();
             foreach (var (key, value) in utf8Macros)
                 api.CompileOptionsAddMacroDefinition(compileOptions, key, (nuint)key.Length, value, (nuint)value.Length);
@@ -84,7 +85,7 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
         }
     }
 
-    private static readonly Regex DiagnosticHeaderRegex = new(@"(?:\n|^)mlang:(\d+): (\w+): ", RegexOptions.Compiled);
+    private static readonly Regex DiagnosticHeaderRegex = new(@"(?:\n|^)\w+:(?:(\d+):)? ([ \w]+): ", RegexOptions.Compiled);
 
     private void ParseDiagnostics(string source, List<Diagnostic> diagnostics, string errorMessage)
     {
@@ -98,7 +99,7 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
             var message = errorMessage.Substring(startIndex, endIndex - startIndex).Trim();
 
             var sourceInfos = Array.Empty<Location>();
-            if (int.TryParse(matches[i].Groups[1].Value, out var lineNumber))
+            if (matches[i].Groups[1].Success && int.TryParse(matches[i].Groups[1].Value, out var lineNumber))
             {
                 var range = ParseErrorRange(sourceFile, message, lineNumber - 1);
                 sourceInfos = [new(sourceFile, range)];
@@ -108,6 +109,7 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
             {
                 "error" => TypeGLSLError.Create([message], sourceInfos),
                 "warning" => TypeGLSLWarning.Create([message], sourceInfos),
+                "internal error" => TypeGLSLInternalError.Create([message], sourceInfos),
                 var severity => TypeGLSLUnknownSeverity.Create([message, severity], sourceInfos)
             });
         }
