@@ -36,6 +36,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         ASTNumericType numeric => Write(numeric),
         ASTArrayType array => Write(array),
         ASTBufferType buffer => Write(buffer),
+        ASTSelection selection => Write(selection),
 
         _ => base.Visit(node)
     };
@@ -170,6 +171,17 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         Writer.Write(buffer.Range.Start.Column);
         Writer.Write(" { ");
         buffer.Inner.Visit(this);
+        return false;
+    }
+
+    private bool Write(ASTSelection selection)
+    {
+        if (!selection.Condition.TryOptionEvaluate(optionValues, out var value))
+            return base.Visit(selection);
+        if (value == 0)
+            selection.Else?.Visit(this);
+        else
+            selection.Then.Visit(this);
         return false;
     }
 }
