@@ -41,7 +41,7 @@ public partial class Compiler : IDisposable
     private readonly IDownstreamCompiler downstreamCompiler = new SilkShadercDownstreamCompiler();
     private readonly string[] extraDownstreamOptions = Array.Empty<string>();
     internal ASTTranslationUnit? unit;
-    private bool wasParsed;
+    private bool? parseSuccess;
     private bool disposedValue;
     private uint? sourceHash;
 
@@ -64,11 +64,13 @@ public partial class Compiler : IDisposable
         parser = new(lexer) { SourceFile = sourceFile };
     }
 
+    public void ClearDiagnostics() => diagnostics.Clear();
+
     public bool ParseShader()
     {
-        if (wasParsed)
-            return !HasError;
-        wasParsed = true;
+        if (parseSuccess.HasValue)
+            return parseSuccess.Value;
+        parseSuccess = false;
 
         try
         {
@@ -98,7 +100,8 @@ public partial class Compiler : IDisposable
             diagnostics.Add(DiagInternal(e));
         }
 
-        return !HasError;
+        parseSuccess = !HasError;
+        return parseSuccess.Value;
     }
 
     public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null)

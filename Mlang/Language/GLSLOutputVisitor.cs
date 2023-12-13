@@ -130,7 +130,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         Writer.WriteLine("void main() {");
         PushIndent();
 
-        if (transferredInstanceVars.Count > 0)
+        if (withInstanceVarTransfers && transferredInstanceVars.Count > 0)
         {
             foreach (var decl in transferredInstanceVars)
             {

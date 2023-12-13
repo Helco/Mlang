@@ -53,7 +53,7 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
                 api.CompileOptionsAddMacroDefinition(compileOptions, key, (nuint)key.Length, value, (nuint)value.Length);
 
             compiler = api.CompilerInitialize();
-            shadercResult = api.CompileIntoSpvAssembly(compiler, sourceBytes, (nuint)sourceBytes.Length, shaderKind, "mlang"u8, "main"u8, compileOptions);
+            shadercResult = api.CompileIntoSpv(compiler, sourceBytes, (nuint)sourceBytes.Length, shaderKind, "mlang"u8, "main"u8, compileOptions);
             var status = api.ResultGetCompilationStatus(shadercResult);
 
             var bytes = Array.Empty<byte>();

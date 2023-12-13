@@ -130,7 +130,7 @@ fragment
 
         var variant = compiler.CompileVariant(new Dictionary<string, uint>()
         {
-            { "IsInstanced", 1u }
+            { "IsInstanced", 0u }
         });
 
         var presenter = new TextDiagnosticsPresenter(Console.Error);
@@ -140,10 +140,6 @@ fragment
         if (!compiler.HasError && variant != null)
         {
             Console.WriteLine(variant.VariantKey.ToString());
-            Console.WriteLine();
-            Console.WriteLine(Encoding.UTF8.GetString(variant.VertexShader));
-            Console.WriteLine();
-            Console.WriteLine(Encoding.UTF8.GetString(variant.FragmentShader));
         }
     }
 }
