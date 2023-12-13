@@ -38,7 +38,7 @@ public partial class Compiler : IDisposable
     private readonly Lexer lexer;
     private readonly Parser parser;
     private readonly List<Diagnostic> diagnostics = new();
-    private readonly IDownstreamCompiler downstreamCompiler = new SourceDownstreamCompiler();
+    private readonly IDownstreamCompiler downstreamCompiler = new SilkShadercDownstreamCompiler();
     private readonly string[] extraDownstreamOptions = Array.Empty<string>();
     internal ASTTranslationUnit? unit;
     private bool wasParsed;
@@ -50,6 +50,7 @@ public partial class Compiler : IDisposable
 #endif
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
     public bool HasError => diagnostics.Any(d => d.Severity == Severity.Error || d.Severity == Severity.InternalError);
+    public bool OutputGeneratedSourceOnError { get; set; } = true;
 
     public Compiler(string fileName, string sourceText) :
         this(fileName, new MemoryStream(Encoding.UTF8.GetBytes(sourceText))) { }
@@ -155,6 +156,8 @@ public partial class Compiler : IDisposable
         KeyValuePair<string, string>[] macros)
     {
         var result = downstreamCompiler.Compile(source, stageKind, macros, extraDownstreamOptions);
+        if (OutputGeneratedSourceOnError && result.HasError)
+            diagnostics.Add(DiagGeneratedSource(source));
         diagnostics.AddRange(result.Diagnostics);
         return result.HasError ? null : result.Result.ToArray();
     }

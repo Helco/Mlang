@@ -7,7 +7,7 @@ using Mlang.Model;
 
 namespace Mlang.Language;
 
-internal abstract class GLSLOutputVisitor : IASTVisitor
+internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 {
     protected const string TransferredInstancePrefix = "instance_";
 
@@ -15,9 +15,6 @@ internal abstract class GLSLOutputVisitor : IASTVisitor
     protected readonly PipelineState pipeline;
     protected readonly IOptionValueSet optionValues;
     protected readonly ISet<ASTDeclaration> transferredInstanceVars;
-    protected readonly MlangOutputVisitor mlangVisitor;
-
-    protected CodeWriter Writer => mlangVisitor.Writer;
     protected bool IsInstanced => optionValues.GetBool(Compiler.IsInstancedOptionName);
 
     protected GLSLOutputVisitor(
@@ -26,21 +23,21 @@ internal abstract class GLSLOutputVisitor : IASTVisitor
         IOptionValueSet optionValues,
         ISet<ASTDeclaration> transferredInstanceVars,
         TextWriter outputWriter)
+        : base(new CodeWriter(outputWriter, disposeWriter: false))
     {
         this.stageBlock = stageBlock;
         this.pipeline = pipeline;
         this.optionValues = optionValues;
         this.transferredInstanceVars = transferredInstanceVars;
-        mlangVisitor = new(new CodeWriter(outputWriter, disposeWriter: false));
     }
 
-    public virtual bool Visit(ASTNode node) => node switch
+    public override bool Visit(ASTNode node) => node switch
     {
         ASTNumericType numeric => Write(numeric),
         ASTArrayType array => Write(array),
         ASTBufferType buffer => Write(buffer),
 
-        _ => mlangVisitor.Visit(node)
+        _ => base.Visit(node)
     };
 
     protected void WritePreamble()
@@ -88,10 +85,10 @@ internal abstract class GLSLOutputVisitor : IASTVisitor
             Writer.Write('_');
             Writer.Write(block.Range.Start.Column);
             Writer.WriteLine(" {");
-            mlangVisitor.PushIndent();
+            PushIndent();
             foreach (var decl in nonBindings)
                 WriteDeclaration(decl, prefix: "", asStatement: true);
-            mlangVisitor.PopIndent();
+            PopIndent();
             Writer.WriteLine("};");
         }
         Writer.WriteLine();
@@ -130,14 +127,13 @@ internal abstract class GLSLOutputVisitor : IASTVisitor
     protected void WriteMainFunction(bool withInstanceVarTransfers)
     {
         Writer.WriteLine("void main() {");
-        mlangVisitor.PushIndent();
+        PushIndent();
 
         if (transferredInstanceVars.Count > 0)
         {
             foreach (var decl in transferredInstanceVars)
             {
                 Writer.Write(TransferredInstancePrefix);
-                Writer.Write('_');
                 Writer.Write(decl.Name);
                 Writer.Write(" = ");
                 Writer.Write(decl.Name);
@@ -147,7 +143,7 @@ internal abstract class GLSLOutputVisitor : IASTVisitor
         }
         foreach (var stmt in stageBlock.Statements)
             stmt.Visit(this);
-        mlangVisitor.PopIndent();
+        PopIndent();
 
         Writer.WriteLine("}");
         Writer.WriteLine();

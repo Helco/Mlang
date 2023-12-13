@@ -15,7 +15,7 @@ internal class MlangOutputVisitor : IASTVisitor
         writerStack.Push(writer);
     }
 
-    public bool Visit(ASTNode node) => node switch
+    public virtual bool Visit(ASTNode node) => node switch
     {
         ASTIntegerLiteral literal => Write(literal),
         ASTRealLiteral literal => Write(literal),
@@ -201,8 +201,8 @@ internal class MlangOutputVisitor : IASTVisitor
     #endregion
 
     #region Statements
-    public void PushIndent() => writerStack.Push(Writer.Indented);
-    public void PopIndent() => writerStack.Pop().Dispose();
+    protected void PushIndent() => writerStack.Push(Writer.Indented);
+    protected void PopIndent() => writerStack.Pop().Dispose();
 
     private void WriteAsNewScope(ASTStatement stmt)
     {

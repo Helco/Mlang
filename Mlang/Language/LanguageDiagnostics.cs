@@ -194,4 +194,10 @@ partial class Diagnostics
 
     internal static Diagnostic DiagDuplicateStorageName(ISourceFile source, ASTDeclaration prevDecl, ASTDeclaration newDecl) =>
         TypeDuplicateStorageName.Create([prevDecl.Name], [new(source, prevDecl.Range), new(source, newDecl.Range)]);
+
+    internal static readonly DiagnosticType TypeGeneratedSource = CategoryLanguage.CreateWithFootNote(
+        Severity.Info, "Generated source", "{0}");
+
+    internal static Diagnostic DiagGeneratedSource(string source) =>
+        TypeGeneratedSource.Create([source]);
 }
