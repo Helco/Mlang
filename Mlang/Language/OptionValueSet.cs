@@ -25,6 +25,31 @@ internal class DictionaryOptionValueSet : IOptionValueSet
     public bool TryGetValue(string name, out uint value) => values.TryGetValue(name, out value);
 }
 
+internal class BitsOptionValueSet : IOptionValueSet
+{
+    private readonly ASTOption[] options;
+    private readonly uint bits;
+
+    public BitsOptionValueSet(ASTOption[] options, uint bits)
+    {
+        this.options = options;
+        this.bits = bits;
+    }
+
+    public bool TryGetValue(string name, out uint value)
+    {
+        value = 0;
+        var option = options.FirstOrDefault(o => o.Name == name);
+        if (option == null || option.BitOffset >= sizeof(uint) * 8)
+            return false;
+
+        value = (bits >> option.BitOffset) & ((1u << option.BitCount) - 1);
+        if (option.NamedValues?.Length > 0)
+            value = (uint)Math.Min(value, option.NamedValues.Length - 1);
+        return true;
+    }
+}
+
 internal class FilteredOptionValueSet : IOptionValueSet
 {
     private readonly ASTOption[] options;

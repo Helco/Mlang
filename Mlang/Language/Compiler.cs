@@ -104,12 +104,13 @@ public partial class Compiler : IDisposable
         return parseSuccess.Value;
     }
 
-    public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null)
+    public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null) =>
+        CompileVariant(new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>()));
+
+    internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues)
     {
         if (!ParseShader())
             return null;
-
-        var userOptionValues = new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>());
         var optionValues = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), userOptionValues);
         var pipelineState = ComposePipelineState(optionValues);
 
