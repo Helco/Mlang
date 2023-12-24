@@ -38,7 +38,7 @@ public readonly record struct ImageType(
     ImageShape Shape,
     SamplerType? Sampler)
 {
-    public bool IsInvalid =>
+    public bool IsValid =>
         Sampler == SamplerType.Shadow &&
         Shape is ImageShape._3D or ImageShape._2DMS or ImageShape._2DMSArray;
 
@@ -46,7 +46,7 @@ public readonly record struct ImageType(
     {
         get
         {
-            if (IsInvalid)
+            if (!IsValid)
                 return "<invalid-image-type>";
             var name = new StringBuilder(24);
             name.Append(Scalar.AsPrefix());
@@ -102,9 +102,8 @@ public readonly record struct ImageType(
 
         void Add(ImageType type)
         {
-            if (type.IsInvalid)
-                return;
-            types.Add(type.GLSLName, type);
+            if (type.IsValid)
+                types.Add(type.GLSLName, type);
         }
     }
 }
