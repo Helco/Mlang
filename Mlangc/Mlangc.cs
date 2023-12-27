@@ -139,6 +139,8 @@ fragment
 
         if (!compiler.HasError && variant != null)
         {
+            File.WriteAllBytes("vertex.spv", variant.VertexShader.ToArray());
+            File.WriteAllBytes("fragment.spv", variant.FragmentShader.ToArray());
             Console.WriteLine(variant.VariantKey.ToString());
         }
     }

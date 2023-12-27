@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using cilspirv.Spirv;
 
 namespace Mlang.Reflection.Spirv;
 
@@ -31,13 +30,9 @@ internal class SpirvInstructionList : IReadOnlyCollection<SpirvInstruction>
     private Span<uint> Words => MemoryMarshal.Cast<byte, uint>(wordBytes);
     public int Count => count.Value;
 
-    public SpirvInstructionList(Stream stream, bool needsSwapping)
+    public SpirvInstructionList(ReadOnlySpan<byte> bytes, bool needsSwapping)
     {
-        var wordBytesSize = stream.Length - stream.Position;
-        wordBytes = new byte[wordBytesSize];
-        if (stream.Read(wordBytes, 0, wordBytes.Length) != wordBytesSize)
-            throw new EndOfStreamException($"Could not read all {wordBytesSize} bytes of the SPIRV instructions");
-
+        wordBytes = bytes.ToArray();
         if (needsSwapping)
             SpirvModule.SwapAll(Words);
 

@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
-using Mlang.Reflection.Spirv;
 
-namespace cilspirv.Spirv
+namespace Mlang.Reflection.Spirv
 {
     public sealed record SpirvModule
     {
@@ -20,26 +19,32 @@ namespace cilspirv.Spirv
         public uint Bound { get; } = BoundNotSet;
         public IReadOnlyCollection<SpirvInstruction> Instructions { get; }
 
-        public SpirvModule(Stream stream, bool leaveOpen = false)
+        public SpirvModule(ReadOnlySpan<byte> spirvBytes)
         {
-            using var reader = new BinaryReader(stream, System.Text.Encoding.Default, leaveOpen);
-            Magic = reader.ReadUInt32();
-
-            var readWord = Magic switch
+            Magic = ReadWord(ref spirvBytes, needsSwap: false);
+            var needsSwapping = Magic switch
             {
-                DefaultMagic => (Func<uint>)reader.ReadUInt32,
-                SwappedMagic => () => Swap32(reader.ReadUInt32()),
+                DefaultMagic => false,
+                SwappedMagic => true,
                 _ => throw new InvalidDataException($"Invalid magic number {Magic.ToString("X8")}")
             };
-            SpirvVersion = DecodeVersion(readWord() >> 8);
-            uint generatorMagic = readWord();
+
+            SpirvVersion = DecodeVersion(ReadWord(ref spirvBytes, needsSwapping) >> 8);
+            uint generatorMagic = ReadWord(ref spirvBytes, needsSwapping);
             GeneratorToolID = (ushort)(generatorMagic >> 16);
             GeneratorVersion = DecodeVersion(generatorMagic);
-            Bound = readWord();
-            if (readWord() != 0)
+            Bound = ReadWord(ref spirvBytes, needsSwapping);
+            if (ReadWord(ref spirvBytes, needsSwapping) != 0)
                 throw new NotSupportedException("Unsupported reserved number");
 
-            Instructions = new SpirvInstructionList(stream, needsSwapping: Magic == SwappedMagic);
+            Instructions = new SpirvInstructionList(spirvBytes, needsSwapping: Magic == SwappedMagic);
+        }
+
+        private uint ReadWord(ref ReadOnlySpan<byte> bytes, bool needsSwap)
+        {
+            var value = MemoryMarshal.Cast<byte, uint>(bytes)[0];
+            bytes = bytes[sizeof(uint)..];
+            return needsSwap ? Swap32(value) : value;
         }
 
         // from https://stackoverflow.com/questions/19560436/bitwise-endian-swap-for-various-types
