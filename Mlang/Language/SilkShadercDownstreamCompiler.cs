@@ -42,12 +42,12 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
 
             compileOptions = api.CompileOptionsInitialize();
             api.CompileOptionsSetSourceLanguage(compileOptions, SourceLanguage.Glsl);
-            api.CompileOptionsSetAutoBindUniforms(compileOptions, true);
-            api.CompileOptionsSetAutoMapLocations(compileOptions, true);
+            api.CompileOptionsSetAutoBindUniforms(compileOptions, false);
+            api.CompileOptionsSetAutoMapLocations(compileOptions, false);
             api.CompileOptionsSetOptimizationLevel(compileOptions, OptimizationLevel.Performance);
             api.CompileOptionsSetGenerateDebugInfo(compileOptions);
-            api.CompileOptionsSetTargetEnv(compileOptions, TargetEnv.Vulkan, (uint)EnvVersion.Vulkan10);
-            api.CompileOptionsSetTargetSpirv(compileOptions, SpirvVersion.Shaderc10);
+            api.CompileOptionsSetTargetEnv(compileOptions, TargetEnv.Vulkan, (uint)EnvVersion.Vulkan12);
+            api.CompileOptionsSetTargetSpirv(compileOptions, SpirvVersion.Shaderc14);
             var utf8Macros = macros.Select(p => (Encoding.UTF8.GetBytes(p.Key), Encoding.UTF8.GetBytes(p.Value))).ToArray();
             foreach (var (key, value) in utf8Macros)
                 api.CompileOptionsAddMacroDefinition(compileOptions, key, (nuint)key.Length, value, (nuint)value.Length);

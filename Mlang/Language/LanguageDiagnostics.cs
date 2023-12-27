@@ -200,4 +200,22 @@ partial class Diagnostics
 
     internal static Diagnostic DiagGeneratedSource(string source) =>
         TypeGeneratedSource.Create([source]);
+
+    internal static readonly DiagnosticType TypeNonNumericVertexAttribute = CategoryLanguage.Create(
+        Severity.Error, "Vertex attribute {0} is not numeric");
+
+    internal static Diagnostic DiagNonNumericVertexAttribute(ISourceFile source, ASTDeclaration decl) =>
+        TypeNonNumericVertexAttribute.Create([decl.Name], [new(source, decl.Range)]);
+
+    internal static readonly DiagnosticType TypeNonNumericNorBindingUniform = CategoryLanguage.Create(
+        Severity.Error, "Non-binding uniform member {0} is not numeric");
+
+    internal static Diagnostic DiagNonNumericNorBindingUniform(ISourceFile source, ASTDeclaration decl) =>
+        TypeNonNumericNorBindingUniform.Create([decl.Name], [new(source, decl.Range)]);
+
+    internal static readonly DiagnosticType TypeUnsupportedBufferType = CategoryLanguage.Create(
+        Severity.Error, "Unsupported type for buffer {0}, currently only arrays of numeric types are supported");
+
+    internal static Diagnostic DiagUnsupportedBufferType(ISourceFile source, ASTDeclaration decl) =>
+        TypeUnsupportedBufferType.Create([decl.Name], [new(source, decl.Range)]);
 }

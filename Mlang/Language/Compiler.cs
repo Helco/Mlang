@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Generic.Polyfill;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -32,6 +33,7 @@ public partial class Compiler : IDisposable
     private const int BufferSize = 1024; // the documented default StreamReader buffer
     internal const int MaxVariantBits = 16;
     internal const string IsInstancedOptionName = "IsInstanced";
+    internal const string TransferredInstancePrefix = "instance_";
 
     private readonly Stream sourceStream; // disposed (if at all) by sourceFile
     private readonly SourceFile sourceFile;
@@ -104,8 +106,21 @@ public partial class Compiler : IDisposable
         return parseSuccess.Value;
     }
 
-    public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null) =>
-        CompileVariant(new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>()));
+    public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null)
+    {
+        try
+        {
+            return CompileVariant(new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>()));
+        }
+        catch(Exception e)
+#if DEBUG
+        when (!ThrowInternalErrors)
+#endif
+        {
+            diagnostics.Add(DiagInternal(e));
+        }
+        return null;
+    }
 
     internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues)
     {
@@ -113,10 +128,22 @@ public partial class Compiler : IDisposable
             return null;
         var optionValues = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), userOptionValues);
         var pipelineState = ComposePipelineState(optionValues);
+        var vertexStageBlock = FindStageBlock(TokenKind.KwVertex, optionValues);
+        var fragmentStageBlock = FindStageBlock(TokenKind.KwFragment, optionValues);
+        if (vertexStageBlock == null || fragmentStageBlock == null)
+            return null;
+
+        var transferredInstanceVars = FindUsedInstanceVariables(fragmentStageBlock, optionValues);
+        var vertexAttributes = LayoutVertexAttributes(optionValues);
+        var (bindingSetSizes, bindings) = LayoutBindings(optionValues);
+        LayoutVarying(optionValues, transferredInstanceVars);
 
         using var vertexGLSL = new StringWriter();
         using var fragmentGLSL = new StringWriter();
-        WriteGLSL(pipelineState, vertexGLSL, fragmentGLSL, optionValues);
+        var vertexVisitor = new GLSLVertexOutputVisitor(vertexStageBlock, pipelineState, optionValues, transferredInstanceVars, vertexGLSL);
+        var fragmentVisitor = new GLSLFragmentOutputVisitor(fragmentStageBlock, pipelineState, optionValues, transferredInstanceVars, fragmentGLSL);
+        unit.Visit(vertexVisitor);
+        unit.Visit(fragmentVisitor);
 
         var macros = CollectMacros(optionValues);
         var vertexBytes = CompileStage(vertexGLSL.ToString(), TokenKind.KwVertex, macros);
@@ -125,7 +152,14 @@ public partial class Compiler : IDisposable
         var shaderHash = HashShaderSource();
         var optionBits = CollectOptionBits(optionValues);
         var variantKey = new ShaderVariantKey(shaderHash, optionBits);
-        return HasError ? null : new(variantKey, pipelineState, vertexBytes!, fragmentBytes!);
+        return HasError ? null : new(
+            variantKey,
+            pipelineState,
+            vertexAttributes,
+            bindingSetSizes,
+            bindings,
+            vertexBytes!,
+            fragmentBytes!);
     }
 
     private PipelineState ComposePipelineState(IOptionValueSet optionValues)
@@ -267,6 +301,60 @@ public partial class Compiler : IDisposable
             if (instancesBlock != null)
                 diagnostics.Add(DiagInstancesBlockWithoutOption(sourceFile, instancesBlock.Range));
         }
+    }
+
+    private ASTStageBlock? FindStageBlock(TokenKind stageKind, IOptionValueSet optionValues)
+    {
+        if (unit == null)
+            return null;
+        var stageBlocks = unit.Blocks
+                .OfType<ASTStageBlock>()
+                .Where(b => b.Stage == stageKind && b.EvaluateCondition(optionValues))
+                .ToArray() as IEnumerable<ASTStageBlock>;
+        if (stageBlocks.None())
+        {
+            diagnostics.Add(DiagNoStageBlock(stageKind));
+            return null;
+        }
+        if (stageBlocks.Count() > 1)
+        {
+            var firstBlock = stageBlocks.First();
+            var secondBlock = stageBlocks.Skip(1).First();
+            diagnostics.Add(DiagMultipleStageBlocks(sourceFile, firstBlock.Range, secondBlock.Range, stageKind));
+            return null;
+        }
+        return stageBlocks.Single();
+    }
+
+    private Dictionary<string, ASTDeclaration> FindAllInstanceVariables(IOptionValueSet optionValues)
+    {
+        var list = unit!.Blocks
+            .OfType<ASTStorageBlock>()
+            .Where(b => b.StorageKind == TokenKind.KwInstances && b.EvaluateCondition(optionValues))
+            .SelectMany(b => b.Declarations);
+        var map = new Dictionary<string, ASTDeclaration>();
+        foreach (var decl in list)
+        {
+            if (map.TryGetValue(decl.Name, out var prevDecl))
+                diagnostics.Add(DiagDuplicateStorageName(sourceFile, prevDecl, decl));
+            else
+                map.Add(decl.Name, decl);
+        }
+        return map;
+    }
+
+    private HashSet<ASTDeclaration> FindUsedInstanceVariables(ASTStageBlock fragmentStage, IOptionValueSet optionValues)
+    {
+        if (unit == null || !optionValues.GetBool(IsInstancedOptionName))
+            return new();
+        var allDecls = FindAllInstanceVariables(optionValues);
+        var visitor = new VariableUsageVisitor<ASTDeclaration>(allDecls);
+
+        foreach (var function in unit.Blocks.OfType<ASTFunction>())
+            function.Visit(visitor);
+        fragmentStage.Visit(visitor);
+
+        return visitor.UsedVariables.Select(name => allDecls[name]).ToHashSet();
     }
 
     protected virtual void Dispose(bool disposing)

@@ -86,6 +86,8 @@ public readonly record struct NumericType(
                 name.Append('x');
                 name.Append(Rows);
             }
+            if (IsNormalized)
+                name.Append("_norm");
             return name.ToString();
         }
     }
@@ -101,7 +103,7 @@ public readonly record struct NumericType(
             else if (compatible.IsVector)
             {
                 var name = new StringBuilder(8);
-                name.Append(Scalar.AsPrefix());
+                name.Append(compatible.Scalar.AsPrefix());
                 name.Append("vec");
                 name.Append(Rows);
                 return name.ToString();
@@ -120,6 +122,10 @@ public readonly record struct NumericType(
             }
         }
     }
+
+    private int SizeOfVector => (Rows == 3 ? 4 : Rows) * sizeof(float);
+    public int Size => Columns * SizeOfVector;
+    public int Alignment => SizeOfVector;
 
     public override string ToString() => MlangName;
 

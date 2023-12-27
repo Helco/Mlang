@@ -15,7 +15,9 @@ internal static class IOptionValueSetExtensions
         set.TryGetValue(name, out var value) ? value
         : throw new ArgumentException($"Could not retrieve option value {name}");
 
-    public static bool GetBool(this IOptionValueSet set, string name) => set.GetValue(name) != 0;
+    public static bool GetBool(this IOptionValueSet set, string name, bool required = false) => required
+        ? set.GetValue(name) != 0
+        : set.TryGetValue(name, out var value) ? value != 0 : false;
 }
 
 internal class DictionaryOptionValueSet : IOptionValueSet

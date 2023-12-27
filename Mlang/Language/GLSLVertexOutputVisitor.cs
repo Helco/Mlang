@@ -38,16 +38,16 @@ internal class GLSLVertexOutputVisitor : GLSLOutputVisitor
         switch(block.StorageKind)
         {
             case TokenKind.KwAttributes:
-                WriteStorageBlock(block, "in");
+                WriteLocationStorageBlock(block, "in");
                 break;
             case TokenKind.KwVarying:
-                WriteStorageBlock(block, "out");
+                WriteLocationStorageBlock(block, "out");
                 break;
             case TokenKind.KwUniform:
                 WriteUniformBlock(block);
                 break;
             case TokenKind.KwInstances when IsInstanced:
-                WriteStorageBlock(block, "in");
+                WriteLocationStorageBlock(block, "in");
                 WriteInstanceVarying(block, "out");
                 break;
             case TokenKind.KwInstances when !IsInstanced:

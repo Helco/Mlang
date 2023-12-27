@@ -19,8 +19,7 @@ public enum ImageShape
 
 public enum SamplerType
 {
-    Normal,
-    Shadow
+    Normal
 }
 
 public static class SamplerTypeExtensions
@@ -28,7 +27,6 @@ public static class SamplerTypeExtensions
     public static string AsGLSLName(this SamplerType type) => type switch
     {
         SamplerType.Normal => "sampler",
-        SamplerType.Shadow => "samplerShadow",
         _ => throw new NotImplementedException("Unimplemented sampler type")
     };
 }
@@ -38,9 +36,7 @@ public readonly record struct ImageType(
     ImageShape Shape,
     SamplerType? Sampler)
 {
-    public bool IsValid =>
-        Sampler == SamplerType.Shadow &&
-        Shape is ImageShape._3D or ImageShape._2DMS or ImageShape._2DMSArray;
+    public bool IsValid => true;
 
     public string GLSLName
     {
@@ -64,8 +60,6 @@ public readonly record struct ImageType(
                 ImageShape._2DMSArray => "2DMSArray",
                 _ => throw new NotImplementedException("Unimplemented image shape")
             });
-            if (Sampler == SamplerType.Shadow)
-                name.Append("Shadow");
             return name.ToString();
         }
     }
@@ -79,7 +73,6 @@ public readonly record struct ImageType(
     {
         type = default;
         if (text == SamplerType.Normal.AsGLSLName()) type = SamplerType.Normal;
-        else if (text == SamplerType.Shadow.AsGLSLName()) type = SamplerType.Shadow;
         else return false;
         return true;
     }
@@ -95,7 +88,6 @@ public readonly record struct ImageType(
             {
                 Add(new(scalarType, imageShape, null));
                 Add(new(scalarType, imageShape, SamplerType.Normal));
-                Add(new(scalarType, imageShape, SamplerType.Shadow));
             }
         }
         return types;

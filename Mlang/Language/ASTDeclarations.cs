@@ -57,11 +57,33 @@ internal class ASTArrayType : ASTType
     }
 }
 
+internal readonly struct ASTLayoutInfo
+{
+    public readonly int? InLocation;
+    public readonly int? OutLocation;
+    public readonly int? Binding;
+    public readonly int? Set;
+
+    private ASTLayoutInfo(int? inLocation = null, int? outLocation = null, int? binding = null, int? set = null)
+    {
+        InLocation = inLocation;
+        OutLocation = outLocation;
+        Binding = binding;
+        Set = set;
+    }
+
+    public static ASTLayoutInfo CreateInLocation(int location) => new(inLocation: location);
+    public static ASTLayoutInfo CreateLocation(int? location) => new(location, location);
+    public ASTLayoutInfo WithOutLocation(int outLocation) => new(InLocation, outLocation, Binding, Set);
+    public static ASTLayoutInfo CreateBinding(int set, int binding) => new(binding: binding, set: set);
+}
+
 internal class ASTDeclaration : ASTNode
 {
     public required ASTType Type { get; init; }
     public required string Name { get; init; }
     public ASTExpression? Initializer { get; init; }
+    public ASTLayoutInfo Layout { get; set; }
 
     public override void Visit(IASTVisitor visitor)
     {

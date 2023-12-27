@@ -27,18 +27,28 @@ public class ShaderVariant : IShaderVariantKeyable
 
     public ShaderVariantKey VariantKey { get; }
     public PipelineState PipelineState { get; }
+    public IReadOnlyList<VertexAttributeInfo> VertexAttributes { get; }
+    public IReadOnlyList<int> BindingSetSizes { get; }
+    /// <remarks>Sorted by set and binding indices</remarks>
+    public IReadOnlyList<IBindingInfo> Bindings { get; }
     public ReadOnlySpan<byte> VertexShader => vertexShader;
     public ReadOnlySpan<byte> FragmentShader => fragmentShader;
 
-    internal ShaderVariant(
+    public ShaderVariant(
         ShaderVariantKey variantKey,
         PipelineState pipelineState,
+        IReadOnlyList<VertexAttributeInfo> vertexAttributes,
+        IReadOnlyList<int> bindingSetSizes,
+        IReadOnlyList<IBindingInfo> bindings,
         byte[] vertexShader,
         byte[] fragmentShader)
     {
-        VariantKey = variantKey;
-        PipelineState = pipelineState;
         this.vertexShader = vertexShader;
         this.fragmentShader = fragmentShader;
+        VariantKey = variantKey;
+        PipelineState = pipelineState;
+        VertexAttributes = vertexAttributes;
+        BindingSetSizes = bindingSetSizes;
+        Bindings = bindings;
     }
 }

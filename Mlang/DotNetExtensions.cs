@@ -22,4 +22,7 @@ internal static class DotNetExtensions
 
     public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> pair, out TKey key, out TValue value) =>
         (key, value) = (pair.Key, pair.Value);
+
+    public static IEnumerable<(int, T)> Indexed<T>(this IEnumerable<T> set) =>
+        set.Select((val, index) => (index, val));
 }
