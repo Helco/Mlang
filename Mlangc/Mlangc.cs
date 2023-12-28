@@ -130,7 +130,7 @@ fragment
 
         var variant = compiler.CompileVariant(new Dictionary<string, uint>()
         {
-            { "IsInstanced", 0u }
+            { "IsInstanced", 1u }
         });
 
         var presenter = new TextDiagnosticsPresenter(Console.Error);

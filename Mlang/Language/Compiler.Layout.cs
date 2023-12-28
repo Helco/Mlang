@@ -34,7 +34,7 @@ partial class Compiler
 
                 decl.Layout = ASTLayoutInfo.CreateInLocation(location);
                 infos.Add(new(location, decl.Name, numericType, isInstance: block.StorageKind == TokenKind.KwInstances));
-                location++;
+                location += numericType.Columns;
             }
         }
         return infos;
@@ -98,7 +98,7 @@ partial class Compiler
     {
         var blocks = GetStorageBlocksOfKind(TokenKind.KwVarying).Where(b => b.EvaluateCondition(optionValues));
         int location = 0;
-        foreach (var decl in blocks.SelectMany(b => b.Declarations).Concat(transferredInstanceVars))
+        foreach (var decl in blocks.SelectMany(b => b.Declarations))
             decl.Layout = ASTLayoutInfo.CreateLocation(location++);
         foreach (var decl in transferredInstanceVars)
             decl.Layout = decl.Layout.WithOutLocation(location++);
