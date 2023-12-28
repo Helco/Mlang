@@ -218,4 +218,22 @@ partial class Diagnostics
 
     internal static Diagnostic DiagUnsupportedBufferType(ISourceFile source, ASTDeclaration decl) =>
         TypeUnsupportedBufferType.Create([decl.Name], [new(source, decl.Range)]);
+
+    internal static readonly DiagnosticType TypeVariantHadWarnings = CategoryLanguage.Create(
+        Severity.Warning, "Compilation of variant had warnings: {0}");
+
+    internal static Diagnostic DiagVariantHadWarnings(string variantName) =>
+        TypeVariantHadWarnings.Create([variantName]);
+
+    internal static readonly DiagnosticType TypeVariantHadErrors = CategoryLanguage.Create(
+        Severity.Error, "Compilation of variant had errors: {0}");
+
+    internal static Diagnostic DiagVariantHadErrors(string variantName) =>
+        TypeVariantHadErrors.Create([variantName]);
+
+    internal static readonly DiagnosticType TypeStartOfVariant = CategoryLanguage.Create(
+        Severity.Info, "The following diagnostics relate to variant {0}");
+
+    internal static Diagnostic DiagStartOfVariant(string variantName) =>
+        TypeStartOfVariant.Create([variantName]);
 }

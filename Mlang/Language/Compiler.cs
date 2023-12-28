@@ -43,6 +43,7 @@ public partial class Compiler : IDisposable
     private readonly IDownstreamCompiler downstreamCompiler = new SilkShadercDownstreamCompiler();
     private readonly string[] extraDownstreamOptions = Array.Empty<string>();
     internal ASTTranslationUnit? unit;
+    private ShaderInfo? shaderInfo;
     private bool? parseSuccess;
     private bool disposedValue;
     private uint? sourceHash;
@@ -53,6 +54,7 @@ public partial class Compiler : IDisposable
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
     public bool HasError => diagnostics.Any(d => d.Severity == Severity.Error || d.Severity == Severity.InternalError);
     public bool OutputGeneratedSourceOnError { get; set; } = true;
+    public bool OutputErrorsForVariantCompilation { get; set; } = true;
 
     public Compiler(string fileName, string sourceText) :
         this(fileName, new MemoryStream(Encoding.UTF8.GetBytes(sourceText))) { }
@@ -93,6 +95,7 @@ public partial class Compiler : IDisposable
             CheckNamedOptionValues();
             CheckOptionConditions();
             CheckSpecialOptions();
+            CollectShaderInfo();
         }
         catch (Exception e)
 #if DEBUG
@@ -106,26 +109,51 @@ public partial class Compiler : IDisposable
         return parseSuccess.Value;
     }
 
-    public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null)
+    public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null) =>
+        CompileVariant(new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>()));
+    
+    internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues)
     {
+        if (!ParseShader())
+            return null;
+        int previousDiagCount = diagnostics.Count;
         try
         {
-            return CompileVariant(new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>()));
+            return CompileVariantIgnoringErrorOutput(userOptionValues);
         }
-        catch(Exception e)
+        catch (Exception e)
 #if DEBUG
         when (!ThrowInternalErrors)
 #endif
         {
             diagnostics.Add(DiagInternal(e));
         }
+        finally
+        {
+            if (diagnostics.Count > previousDiagCount)
+            {
+                var variantName = FormatVariantName(userOptionValues);
+                if (OutputErrorsForVariantCompilation)
+                    diagnostics.Insert(previousDiagCount, DiagStartOfVariant(variantName));
+                else
+                {
+                    var hadWarnings = diagnostics.Skip(previousDiagCount).Any(d => d.Severity is Severity.Warning);
+                    var hadErrors = diagnostics.Skip(previousDiagCount).Any(d => d.Severity is Severity.Error or Severity.InternalError);
+                    diagnostics.RemoveRange(previousDiagCount, diagnostics.Count - previousDiagCount);
+                    if (hadErrors)
+                        diagnostics.Add(DiagVariantHadErrors(variantName));
+                    else
+                        diagnostics.Add(DiagVariantHadWarnings(variantName));
+                }
+                
+            }
+        }
         return null;
     }
 
-    internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues)
+    internal ShaderVariant? CompileVariantIgnoringErrorOutput(IOptionValueSet userOptionValues)
     {
-        if (!ParseShader())
-            return null;
+        
         var optionValues = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), userOptionValues);
         var pipelineState = ComposePipelineState(optionValues);
         var vertexStageBlock = FindStageBlock(TokenKind.KwVertex, optionValues);
@@ -214,15 +242,90 @@ public partial class Compiler : IDisposable
 
     private uint CollectOptionBits(IOptionValueSet optionValues)
     {
-        var allOptions = unit!.Blocks.OfType<ASTOption>().ToArray();
         var bits = 0u;
-        foreach (var option in allOptions)
+        foreach (var option in unit!.Blocks.OfType<ASTOption>())
         {
             uint value;
             optionValues.TryGetValue(option.Name, out value);
             bits |= (value & ((1u << option.BitCount) - 1u)) << option.BitOffset;
         }
         return bits;
+    }
+
+    private string FormatVariantName(IOptionValueSet optionValues)
+    {
+        if (shaderInfo == null)
+            return "<unknown variant>";
+        var name = new StringBuilder();
+        foreach (var option in shaderInfo.Options)
+        {
+            if (option.NamedValues == null)
+            {
+                if (!optionValues.GetBool(option.Name))
+                    continue;
+                WriteSeparator();
+                name.Append(option.Name);
+            }
+            else
+            {
+                WriteSeparator();
+                name.Append(option.Name);
+                name.Append('=');
+                if (!optionValues.TryGetValue(option.Name, out var value))
+                    value = 0;
+                if (value < option.NamedValues.Length)
+                    name.Append(option.NamedValues[value]);
+                else
+                {
+                    name.Append("unknown");
+                    name.Append(value);
+                }
+            }
+        }
+        return name.ToString();
+
+        void WriteSeparator()
+        {
+            if (name.Length != 0)
+                name.Append(", ");
+        }
+    }
+
+    private void CollectShaderInfo()
+    {
+        if (unit == null)
+            return;
+        var options = unit.Blocks.OfType<ASTOption>()
+            .Select(opt => new OptionInfo(opt.Name, opt.NamedValues))
+            .ToArray();
+
+        var attributes = new List<string>();
+        var instances = new List<string>();
+        var bindings = new List<string>();
+        foreach (var block in unit.Blocks.OfType<ASTStorageBlock>())
+        {
+            var list = block.StorageKind switch
+            {
+                TokenKind.KwAttributes => attributes,
+                TokenKind.KwInstances => instances,
+                TokenKind.KwUniform => bindings,
+                _ => null
+            };
+            if (list == null)
+                continue;
+            foreach (var decl in block.Declarations)
+            {
+                if (!list.Contains(decl.Name))
+                    list.Add(decl.Name);
+            }
+        }
+        shaderInfo = new()
+        {
+            Options = options,
+            VertexAttributes = attributes,
+            InstanceAttributes = instances,
+            Bindings = bindings
+        };
     }
 
     private void CheckVariantSpace()
