@@ -190,6 +190,33 @@ public partial class Compiler : IDisposable
             fragmentBytes!);
     }
 
+    internal IEnumerable<IOptionValueSet> AllVariants()
+    {
+        var options = unit!.Blocks.OfType<ASTOption>().ToArray();
+        var curVariant = 0u;
+        while(true)
+        {
+            yield return new BitsOptionValueSet(options, curVariant);
+            var nextVariant = null as uint?;
+            foreach (var option in options)
+            {
+                var bitMask = (1u << option.BitCount) - 1;
+                var nextValue = ((curVariant >> option.BitOffset) & bitMask) + 1;
+                if (nextValue < option.ValueCount)
+                {
+                    nextVariant = curVariant & ~((1u << (option.BitCount + option.BitOffset)) - 1);
+                    nextVariant |= nextValue << option.BitOffset;
+                    break;
+                }
+            }
+            if (nextVariant is null)
+                break;
+            curVariant = nextVariant.Value;
+        }
+    }
+
+    internal IEnumerable<string> AllVariantNames() => AllVariants().Select(FormatVariantName);
+
     private PipelineState ComposePipelineState(IOptionValueSet optionValues)
     {
         var state = PipelineState.GetDefault(1);

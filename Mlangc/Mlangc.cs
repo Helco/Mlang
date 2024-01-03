@@ -128,6 +128,9 @@ fragment
         Console.Write("Parsing...");
         Console.WriteLine(compiler.ParseShader() ? "success" : "failure");
 
+        foreach (var name in compiler.AllVariantNames())
+            Console.WriteLine(name);
+
         var variant = compiler.CompileVariant(new Dictionary<string, uint>()
         {
             { "IsInstanced", 1u }
