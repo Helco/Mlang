@@ -260,7 +260,7 @@ internal partial class Parser
             Range = name.Range,
             Type = imageType
         },
-        _ when ImageType.TryParseSamplerType(name.Text, out var samplerType) => new ASTSamplerType()
+        _ when SamplerType.TryParse(name.Text, out var samplerType) => new ASTSamplerType()
         {
             Range = name.Range,
             Type = samplerType

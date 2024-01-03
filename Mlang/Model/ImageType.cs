@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Mlang.Model;
@@ -17,24 +18,32 @@ public enum ImageShape
     _2DMSArray,
 }
 
-public enum SamplerType
+public readonly record struct SamplerType : IDataType
 {
-    Normal
-}
+    DataTypeCategory IDataType.Category => DataTypeCategory.Sampler;
 
-public static class SamplerTypeExtensions
-{
-    public static string AsGLSLName(this SamplerType type) => type switch
+    void IDataType.Write(BinaryWriter writer)
     {
-        SamplerType.Normal => "sampler",
-        _ => throw new NotImplementedException("Unimplemented sampler type")
-    };
+    }
+
+    public string GLSLName => "sampler";
+
+    public static readonly SamplerType Normal = default;
+
+    public static bool TryParse(string text, out SamplerType type)
+    {
+        type = default;
+        if (text == SamplerType.Normal.GLSLName) type = SamplerType.Normal;
+        else return false;
+        return true;
+    }
 }
 
 public readonly record struct ImageType(
     ScalarType Scalar,
     ImageShape Shape,
     SamplerType? Sampler)
+    : IDataType
 {
     public bool IsValid => true;
 
@@ -69,14 +78,6 @@ public readonly record struct ImageType(
     public static bool TryParse(string text, out ImageType type) =>
         TypeNames.TryGetValue(text, out type);
 
-    public static bool TryParseSamplerType(string text, out SamplerType type)
-    {
-        type = default;
-        if (text == SamplerType.Normal.AsGLSLName()) type = SamplerType.Normal;
-        else return false;
-        return true;
-    }
-
     private static readonly IReadOnlyDictionary<string, ImageType> TypeNames = GenerateAll();
 
     private static IReadOnlyDictionary<string, ImageType> GenerateAll()
@@ -98,4 +99,18 @@ public readonly record struct ImageType(
                 types.Add(type.GLSLName, type);
         }
     }
+
+    DataTypeCategory IDataType.Category => DataTypeCategory.Image;
+
+    void IDataType.Write(BinaryWriter writer)
+    {
+        writer.Write((byte)Scalar);
+        writer.Write((byte)Shape);
+        writer.Write(Sampler.HasValue);
+    }
+
+    internal static ImageType Read(BinaryReader reader) => new(
+        (ScalarType)reader.ReadByte(),
+        (ImageShape)reader.ReadByte(),
+        reader.ReadBoolean() ? SamplerType.Normal : null);
 }

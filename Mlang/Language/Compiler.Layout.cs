@@ -33,7 +33,13 @@ partial class Compiler
                     diagnostics.Add(DiagNonNumericVertexAttribute(sourceFile, decl));
 
                 decl.Layout = ASTLayoutInfo.CreateInLocation(location);
-                infos.Add(new(location, decl.Name, numericType, isInstance: block.StorageKind == TokenKind.KwInstances));
+                infos.Add(new()
+                {
+                    AttributeIndex = location,
+                    Name = decl.Name,
+                    Type = numericType,
+                    IsInstance = block.StorageKind == TokenKind.KwInstances
+                });
                 location += numericType.Columns;
             }
         }
@@ -77,6 +83,12 @@ partial class Compiler
                 }
                 else
                     diagnostics.Add(DiagNonNumericNorBindingUniform(sourceFile, decl));
+            }
+            if (structBinding != null)
+            {
+                var structType = new StructureType(structMembers);
+                var structName = $"block_{block.Range.Start.Line}_{block.Range.Start.Column}";
+                infos.Add(new BindingInfo<StructureType>(set, binding, structName, structType, isInstance));
             }
         }
         return (setSizes, infos);

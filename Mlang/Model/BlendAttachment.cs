@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace Mlang.Model;
 
@@ -31,7 +32,20 @@ public readonly record struct BlendFormula(
     BlendFactor Source,
     BlendFactor Destination,
     BlendFunction Function
-);
+)
+{
+    internal static BlendFormula Read(BinaryReader reader) => new(
+        (BlendFactor)reader.ReadByte(),
+        (BlendFactor)reader.ReadByte(),
+        (BlendFunction)reader.ReadByte());
+
+    internal void Write(BinaryWriter writer)
+    {
+        writer.Write((byte)Source);
+        writer.Write((byte)Destination);
+        writer.Write((byte)Function);
+    }
+}
 
 public readonly record struct BlendAttachment(
     BlendFormula? Color,
@@ -39,4 +53,25 @@ public readonly record struct BlendAttachment(
 )
 {
     public static readonly BlendAttachment NoBlend = default;
+
+    internal static BlendAttachment Read(BinaryReader reader)
+    {
+        var isNoBlend = reader.ReadBoolean();
+        if (isNoBlend)
+            return NoBlend;
+        var hasAlpha = reader.ReadBoolean();
+        return new(BlendFormula.Read(reader), hasAlpha ? BlendFormula.Read(reader) : null);
+    }
+
+    internal static void Write(BinaryWriter writer, BlendAttachment a)
+    {
+        if (a.Color == null)
+        {
+            writer.Write(false);
+            return;
+        }
+        writer.Write(a.Alpha.HasValue);
+        a.Color.Value.Write(writer);
+        a.Alpha?.Write(writer);
+    }
 }

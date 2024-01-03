@@ -377,7 +377,7 @@ internal class MlangOutputVisitor : IASTVisitor
 
     private bool Write(ASTSamplerType type)
     {
-        Writer.Write(type.Type.AsGLSLName());
+        Writer.Write(type.Type.GLSLName);
         return false;
     }
 

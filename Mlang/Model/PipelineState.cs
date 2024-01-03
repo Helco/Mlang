@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 namespace Mlang.Model;
@@ -18,6 +19,19 @@ internal struct PartialStencilState
         Fail = state.Fail ?? Fail,
         DepthFail = state.DepthFail ?? DepthFail
     };
+
+    public static PartialStencilState AsDifference(StencilState target, StencilState from)
+    {
+        var state = new PartialStencilState();
+        state.Comparison = AsDifference(target.Comparison, from.Comparison);
+        state.Pass = AsDifference(target.Pass, from.Pass);
+        state.Fail = AsDifference(target.Fail, from.Fail);
+        state.DepthFail = AsDifference(target.DepthFail, from.DepthFail);
+        return state;
+    }
+
+    private static T? AsDifference<T>(T target, T from) where T : struct =>
+        EqualityComparer<T>.Default.Equals(target, from) ? null : target;
 }
 
 internal class PartialPipelineState
@@ -37,7 +51,7 @@ internal class PartialPipelineState
     public PartialStencilState StencilBack;
 
     public FaceCullMode? CullMode;
-    public PolygonFillMode? FillMode;
+    public FaceFillMode? FillMode;
     public FrontFace? FrontFace;
     public bool? DepthClip;
     public bool? ScissorTest;
@@ -76,19 +90,46 @@ internal class PartialPipelineState
         ColorOutputs = ColorOutputs.Concat(state.ColorOutputs).ToArray();
         OutputSamples = state.OutputSamples ?? OutputSamples;
     }
-}
 
-public readonly record struct StencilState(
-    ComparisonKind Comparison,
-    StencilOperation Pass,
-    StencilOperation Fail,
-    StencilOperation DepthFail)
-{
-    internal StencilState With(in PartialStencilState primary, in PartialStencilState secondary) => new(
-        primary.Comparison ?? secondary.Comparison ?? Comparison,
-        primary.Pass ?? secondary.Pass ?? Pass,
-        primary.Fail ?? secondary.Fail ?? Fail,
-        primary.DepthFail ?? secondary.DepthFail ?? DepthFail);
+    /// <summary>Returns a partial state P such that <code>from.With(P).Equals(to)</code></summary>
+    public static PartialPipelineState AsDifference(PipelineState to, PipelineState from)
+    {
+        var state = new PartialPipelineState();
+        state.CoverageToAlpha = AsDifference(to.CoverageToAlpha, from.CoverageToAlpha);
+        state.BlendFactor = AsDifference(to.BlendFactor, from.BlendFactor);
+        state.BlendAttachments = to.BlendAttachments.SequenceEqual(from.BlendAttachments)
+            ? Array.Empty<BlendAttachment>()
+            : to.BlendAttachments.ToArray();
+
+        state.DepthTest = AsDifference(to.DepthTest, from.DepthTest);
+        state.DepthWrite = AsDifference(to.DepthWrite, from.DepthWrite);
+        state.StencilTest = AsDifference(to.StencilTest, from.StencilTest);
+        state.StencilReadMask = AsDifference(to.StencilReadMask, from.StencilReadMask);
+        state.StencilWriteMask = AsDifference(to.StencilWriteMask, from.StencilWriteMask);
+        state.StencilReference = AsDifference(to.StencilReference, from.StencilReference);
+        state.Stencil = default;
+        state.StencilBack = PartialStencilState.AsDifference(to.StencilBack, from.StencilBack);
+        state.StencilFront = PartialStencilState.AsDifference(to.StencilFront, from.StencilFront);
+
+        state.CullMode = AsDifference(to.CullMode, from.CullMode);
+        state.FillMode = AsDifference(to.FillMode, from.FillMode);
+        state.FrontFace = AsDifference(to.FrontFace, from.FrontFace);
+        state.DepthClip = AsDifference(to.DepthClip, from.DepthClip);
+        state.ScissorTest = AsDifference(to.ScissorTest, from.ScissorTest);
+
+        state.PrimitiveTopology = AsDifference(to.PrimitiveTopology, from.PrimitiveTopology);
+        state.DepthOutput = to.DepthOutput;
+        state.ColorOutputs =
+            to.ColorOutputs.Count == from.ColorOutputs.Count &&
+            to.ColorOutputs.Zip(from.ColorOutputs, (a, b) => a.Key == b.Key && a.Value == b.Value).All(b => b)
+            ? Array.Empty<KeyValuePair<string, PixelFormat>>()
+            : to.ColorOutputs.ToArray();
+        state.OutputSamples = AsDifference(to.OutputSamples, from.OutputSamples);
+        return state;
+    }
+
+    private static T? AsDifference<T>(T target, T from) where T : struct =>
+        EqualityComparer<T>.Default.Equals(target, from) ? null : target;
 }
 
 public record PipelineState
@@ -107,7 +148,7 @@ public record PipelineState
     public StencilState StencilBack { get; init; }
 
     public FaceCullMode CullMode { get; init; }
-    public PolygonFillMode FillMode { get; init; }
+    public FaceFillMode FillMode { get; init; }
     public FrontFace FrontFace { get; init; }
     public bool DepthClip { get; init; }
     public bool ScissorTest { get; init; }
@@ -118,6 +159,7 @@ public record PipelineState
     public required IReadOnlyList<KeyValuePair<string, PixelFormat>> ColorOutputs { get; init; }
     public byte OutputSamples { get; init; }
 
+    public static readonly PipelineState Default = GetDefault(1);
     public static PipelineState GetDefault(int attachmentCounts) => new()
     {
         BlendAttachments = new BlendAttachment[attachmentCounts],
@@ -125,7 +167,7 @@ public record PipelineState
         DepthTest = true,
         DepthWrite = true,
         CullMode = FaceCullMode.Back,
-        FillMode = PolygonFillMode.Solid,
+        FillMode = FaceFillMode.Solid,
         FrontFace = FrontFace.CounterClockwise,
         DepthClip = true,
         PrimitiveTopology = PrimitiveTopology.TriangleList,
@@ -165,4 +207,70 @@ public record PipelineState
             .ToArray(),
         OutputSamples = s.OutputSamples ?? OutputSamples
     };
+
+    internal static PipelineState Read(BinaryReader reader) => new()
+    {
+        CoverageToAlpha = reader.ReadBoolean(),
+        BlendFactor = reader.ReadVector4(),
+        BlendAttachments = reader.ReadArray(BlendAttachment.Read),
+
+        DepthTest = reader.ReadBoolean(),
+        DepthWrite = reader.ReadBoolean(),
+        StencilTest = reader.ReadBoolean(),
+        StencilReadMask = reader.ReadByte(),
+        StencilWriteMask = reader.ReadByte(),
+        StencilReference = reader.ReadUInt32(),
+        StencilFront = StencilState.Read(reader),
+        StencilBack = StencilState.Read(reader),
+
+        CullMode = (FaceCullMode)reader.ReadByte(),
+        FillMode = (FaceFillMode)reader.ReadByte(),
+        FrontFace = (FrontFace)reader.ReadByte(),
+        DepthClip = reader.ReadBoolean(),
+        ScissorTest = reader.ReadBoolean(),
+
+        PrimitiveTopology = (PrimitiveTopology)reader.ReadByte(),
+        DepthOutput = reader.ReadNullable(ReadPixelFormat),
+        ColorOutputs = reader.ReadArray(ReadColorOutput),
+        OutputSamples = reader.ReadByte()
+    };
+
+    internal void Write(BinaryWriter writer)
+    {
+        writer.Write(CoverageToAlpha);
+        writer.Write(BlendFactor);
+        writer.Write(BlendAttachments, BlendAttachment.Write);
+
+        writer.Write(DepthTest);
+        writer.Write(DepthWrite);
+        writer.Write(StencilTest);
+        writer.Write(StencilReadMask);
+        writer.Write(StencilWriteMask);
+        writer.Write(StencilReference);
+        StencilFront.Write(writer);
+        StencilBack.Write(writer);
+
+        writer.Write((byte)CullMode);
+        writer.Write((byte)FillMode);
+        writer.Write((byte)FrontFace);
+        writer.Write(DepthClip);
+        writer.Write(ScissorTest);
+
+        writer.Write((byte)PrimitiveTopology);
+
+        writer.Write(DepthOutput, WritePixelFormat);
+        writer.Write(ColorOutputs, WriteColorOutput);
+        writer.Write(OutputSamples);
+    }
+
+    private static PixelFormat ReadPixelFormat(BinaryReader reader) => (PixelFormat)reader.ReadByte();
+    private static void WritePixelFormat(BinaryWriter writer, PixelFormat format) => writer.Write((byte)format);
+    private static KeyValuePair<string, PixelFormat> ReadColorOutput(BinaryReader reader) => new(
+        reader.ReadString(),
+        (PixelFormat)reader.ReadByte());
+    private static void WriteColorOutput(BinaryWriter writer, KeyValuePair<string, PixelFormat> pair)
+    {
+        writer.Write(pair.Key);
+        writer.Write((byte)pair.Value);
+    }
 }

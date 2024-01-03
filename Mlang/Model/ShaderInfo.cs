@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.NetworkInformation;
+using System.IO;
+using Silk.NET.Core;
 
 namespace Mlang.Model;
 
@@ -8,41 +9,57 @@ public record OptionInfo(string name, string[]? namedValues = null)
 {
     public string Name => name;
     public string[]? NamedValues => namedValues;
+
+    internal int BitCount => NamedValues == null ? 1 :
+        (int)Math.Ceiling(Math.Log(NamedValues.Length) / Math.Log(2));
 }
 
-public record VertexAttributeInfo(int attrIndex, string name, NumericType type, bool isInstance = false)
+public record VertexAttributeInfo
 {
-    public int AttributeIndex => attrIndex;
-    public string Name => name;
-    public NumericType Type => type;
-    public bool IsInstance => isInstance;
-}
+    public int AttributeIndex { get; init; }
+    public required string Name { get; init; }
+    public required NumericType Type { get; init; }
+    public bool IsInstance { get; init; }
 
-public interface IBindingInfo
-{
-    int SetIndex { get; }
-    int BindingIndex { get; }
-    string Name { get; }
-    object Type { get; }
-    bool IsInstance { get; }
-}
+    internal static void Write(BinaryWriter writer, VertexAttributeInfo info)
+    {
+        writer.Write(info.AttributeIndex);
+        writer.Write(info.Name);
+        writer.Write(info.IsInstance);
+        info.Type.Write(writer);
+    }
 
-public record BindingInfo<T>(int set, int binding, string name, T type, bool isInstance = false) : IBindingInfo where T : struct
-{
-    public int SetIndex => set;
-    public int BindingIndex => binding;
-    public string Name => name;
-    public T Type => type;
-    object IBindingInfo.Type => type;
-    public bool IsInstance => isInstance;
+    internal static VertexAttributeInfo Read(BinaryReader reader) => new()
+    {
+        AttributeIndex = reader.ReadInt32(),
+        Name = reader.ReadString(),
+        IsInstance = reader.ReadBoolean(),
+        Type = NumericType.Read(reader)
+    };
 }
 
 public record ShaderInfo
 {
+    public required uint SourceHash { get; init; }
     public required IReadOnlyList<OptionInfo> Options { get; init; }
     public required IReadOnlyList<string> VertexAttributes { get; init; }
     public required IReadOnlyList<string> InstanceAttributes { get; init; }
     public required IReadOnlyList<string> Bindings { get; init; }
+
+    public ShaderVariantKey VariantKeyFor(IReadOnlyDictionary<string, uint> options)
+    {
+        uint variantBits = 0;
+        int curBitOffset = 0;
+        foreach (var option in Options)
+        {
+            if (!options.TryGetValue(option.Name, out var value) ||
+                value >= (option.NamedValues?.Length ?? 2))
+                value = 0;
+            variantBits |= (value << curBitOffset);
+            curBitOffset += option.BitCount;
+        }
+        return new(SourceHash, variantBits);
+    }
 }
 
 public record ShaderVariantInfo

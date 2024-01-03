@@ -1,6 +1,6 @@
 ﻿namespace Mlang.Model;
 
-public enum PolygonFillMode
+public enum FaceFillMode
 {
     Solid,
     Wireframe

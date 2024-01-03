@@ -84,7 +84,7 @@ partial class Parser
             case "depthclip": state.DepthClip = true; break;
             case "scissortest": state.ScissorTest = true; break;
 
-            case var _ when Enum.TryParse<PolygonFillMode>(key.Text, ignoreCase: true, out var fillMode):
+            case var _ when Enum.TryParse<FaceFillMode>(key.Text, ignoreCase: true, out var fillMode):
                 state.FillMode = fillMode;
                 break;
             case var _ when Enum.TryParse<PrimitiveTopology>(key.Text, ignoreCase: true, out var topology):
@@ -175,8 +175,8 @@ partial class Parser
     private FrontFace ParseFrontFace(Tk token) =>
         ParseEnum<FrontFace>(token, Mlang.Diagnostics.DiagUnknownFrontFace);
 
-    private PolygonFillMode ParsePolygonFillMode(Tk token) =>
-        ParseEnum<PolygonFillMode>(token, Mlang.Diagnostics.DiagUnknownPolygonFillMode);
+    private FaceFillMode ParsePolygonFillMode(Tk token) =>
+        ParseEnum<FaceFillMode>(token, Mlang.Diagnostics.DiagUnknownPolygonFillMode);
 
     private PrimitiveTopology ParsePrimitiveTopology(Tk token) =>
         ParseEnum<PrimitiveTopology>(token, Mlang.Diagnostics.DiagUnknownPrimitiveTopology);

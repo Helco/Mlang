@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Mlang.Model;
@@ -34,7 +35,7 @@ public readonly record struct NumericType(
     int Rows = 1,
     ScalarWidth ScalarWidth = ScalarWidth.DWord,
     bool IsNormalized = false
-)
+) : IDataType
 {
     public bool IsInvalid =>
         Rows is < 1 or > 4 ||
@@ -206,4 +207,23 @@ public readonly record struct NumericType(
         { "mat4x3", new(ScalarType.Float, 4, 3)},
         { "mat4x4", new(ScalarType.Float, 4, 4)},
     };
+
+    DataTypeCategory IDataType.Category => DataTypeCategory.Numeric;
+
+    void IDataType.Write(BinaryWriter writer)
+    {
+        writer.Write((byte)Scalar);
+        writer.Write((byte)Columns);
+        writer.Write((byte)Rows);
+        writer.Write((byte)ScalarWidth);
+        writer.Write(IsNormalized);
+    }
+    internal void Write(BinaryWriter writer) => (this as IDataType).Write(writer);
+
+    internal static NumericType Read(BinaryReader reader) => new(
+        (ScalarType)reader.ReadByte(),
+        reader.ReadByte(),
+        reader.ReadByte(),
+        (ScalarWidth)reader.ReadByte(),
+        reader.ReadBoolean());
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Mlang.Model;
@@ -9,7 +10,7 @@ public readonly record struct StructureMember(
     int Offset,
     NumericType Type);
 
-public record StructureType
+public record StructureType : IDataType
 {
     /// <remarks>Sorted by offset</remarks>
     public IReadOnlyList<StructureMember> Members { get; }
@@ -35,9 +36,27 @@ public record StructureType
 
     internal static int Align(int offset, int alignment) =>
         (offset + alignment - 1) / alignment * alignment;
+
+    DataTypeCategory IDataType.Category => DataTypeCategory.Structure;
+
+    void IDataType.Write(BinaryWriter writer) => writer.Write(Members, WriteMember);
+    private static void WriteMember(BinaryWriter writer, StructureMember member)
+    {
+        writer.Write(member.Name);
+        member.Type.Write(writer);
+    }
+
+    internal static StructureType Read(BinaryReader reader) => new(reader.ReadArray(ReadMember));
+    private static (string, NumericType) ReadMember(BinaryReader reader) =>
+        (reader.ReadString(), NumericType.Read(reader));
 }
 
-public readonly record struct BufferType(NumericType Inner)
+public readonly record struct BufferType(NumericType Inner) : IDataType
 {
     public int Stride => StructureType.Align(Inner.Size, Inner.Alignment);
+
+    DataTypeCategory IDataType.Category => DataTypeCategory.Buffer;
+
+    void IDataType.Write(BinaryWriter writer) => Inner.Write(writer);
+    internal static BufferType Read(BinaryReader reader) => new(NumericType.Read(reader));
 }

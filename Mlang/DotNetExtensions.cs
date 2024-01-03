@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Numerics;
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Mlangc")]
 
 namespace Mlang;
@@ -25,4 +27,43 @@ internal static class DotNetExtensions
 
     public static IEnumerable<(int, T)> Indexed<T>(this IEnumerable<T> set) =>
         set.Select((val, index) => (index, val));
+
+    public static Vector4 ReadVector4(this BinaryReader reader) => new(
+        reader.ReadSingle(),
+        reader.ReadSingle(),
+        reader.ReadSingle(),
+        reader.ReadSingle());
+
+    public static void Write(this BinaryWriter writer, Vector4 v)
+    {
+        writer.Write(v.X);
+        writer.Write(v.Y);
+        writer.Write(v.Z);
+    }
+
+    public static T[] ReadArray<T>(this BinaryReader reader, Func<BinaryReader, T> readFunc)
+    {
+        var count = reader.ReadUInt32();
+        var array = new T[checked((int)count)];
+        for (uint i = 0; i < count; i++)
+            array[i] = readFunc(reader);
+        return array;
+    }
+
+    public static void Write<T>(this BinaryWriter writer, IReadOnlyList<T> array, Action<BinaryWriter, T> writeFunc)
+    {
+        writer.Write(array.Count);
+        foreach (var e in array)
+            writeFunc(writer, e);
+    }
+
+    public static T? ReadNullable<T>(this BinaryReader reader, Func<BinaryReader, T> readFunc) where T : struct =>
+        reader.ReadBoolean() ? default(T?) : readFunc(reader);
+
+    public static void Write<T>(this BinaryWriter writer, T? opt, Action<BinaryWriter, T> writeFunc) where T : struct
+    {
+        writer.Write(opt.HasValue);
+        if (opt != null)
+            writeFunc(writer, opt.Value);
+    }
 }

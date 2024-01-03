@@ -153,7 +153,6 @@ public partial class Compiler : IDisposable
 
     internal ShaderVariant? CompileVariantIgnoringErrorOutput(IOptionValueSet userOptionValues)
     {
-        
         var optionValues = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), userOptionValues);
         var pipelineState = ComposePipelineState(optionValues);
         var vertexStageBlock = FindStageBlock(TokenKind.KwVertex, optionValues);
@@ -348,6 +347,7 @@ public partial class Compiler : IDisposable
         }
         shaderInfo = new()
         {
+            SourceHash = HashShaderSource(),
             Options = options,
             VertexAttributes = attributes,
             InstanceAttributes = instances,
