@@ -108,7 +108,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
     private void WriteDeclaration(ASTDeclaration declaration, string prefix, bool asStatement, string? namePrefix = null)
     {
         var mlangVisitor = new MlangOutputVisitor(Writer);
-        if (!string.IsNullOrWhiteSpace(prefix))
+        if (!string.IsNullOrWhiteSpace(prefix) && declaration.Type is not ASTBufferType)
         {
             Writer.Write(prefix);
             Writer.Write(' ');

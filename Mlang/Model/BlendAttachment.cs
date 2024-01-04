@@ -56,8 +56,8 @@ public readonly record struct BlendAttachment(
 
     internal static BlendAttachment Read(BinaryReader reader)
     {
-        var isNoBlend = reader.ReadBoolean();
-        if (isNoBlend)
+        var hasColor = reader.ReadBoolean();
+        if (!hasColor)
             return NoBlend;
         var hasAlpha = reader.ReadBoolean();
         return new(BlendFormula.Read(reader), hasAlpha ? BlendFormula.Read(reader) : null);
@@ -65,11 +65,9 @@ public readonly record struct BlendAttachment(
 
     internal static void Write(BinaryWriter writer, BlendAttachment a)
     {
+        writer.Write(a.Color.HasValue);
         if (a.Color == null)
-        {
-            writer.Write(false);
             return;
-        }
         writer.Write(a.Alpha.HasValue);
         a.Color.Value.Write(writer);
         a.Alpha?.Write(writer);

@@ -101,11 +101,11 @@ vertex
     vec2 uv = inUV;
     if (HasEnvMap)
     {
-        float3 incident = world[3] + inPos + view[3] + view[2];
-        uv = -reflect(incident, inNormal);
+        float3 incident = vec3(world[3] + vec4(inPos, 0) + view[3] + view[2]);
+        uv = vec2(-reflect(incident, inNormal));
     }
     if (HasTexShift)
-        uv = texShift * uv;
+        uv = inTexShift * vec3(uv, 1);
 	varUV = uv;
 
 	varColor = inColor;
@@ -128,24 +128,34 @@ fragment
         var compiler = new Compiler("model.mlang", Shader);
         Console.Write("Parsing...");
         Console.WriteLine(compiler.ParseShader() ? "success" : "failure");
-
-        foreach (var name in compiler.AllVariantNames())
-            Console.WriteLine(name);
-
-        var variant = compiler.CompileVariant(new Dictionary<string, uint>()
-        {
-            { "IsInstanced", 1u }
-        });
-
         var presenter = new TextDiagnosticsPresenter(Console.Error);
+        var shaderInfo = compiler.ShaderInfo!;
+
         foreach (var diagnostic in compiler.Diagnostics)
             presenter.Present(diagnostic.ConvertToSynKit());
+        if (compiler.HasError)
+            return;
 
-        if (!compiler.HasError && variant != null)
+        using (var setWriter = new ShaderSetFileWriter(new FileStream("model.shadercache", FileMode.OpenOrCreate, FileAccess.Write)))
         {
-            File.WriteAllBytes("vertex.spv", variant.VertexShader.ToArray());
-            File.WriteAllBytes("fragment.spv", variant.FragmentShader.ToArray());
-            Console.WriteLine(variant.VariantKey.ToString());
+            setWriter.AddShader(shaderInfo.SourceHash, "Model", Shader, (uint)compiler.AllVariants.Count);
+            foreach (var variantOptions in compiler.AllVariants)
+            {
+                Console.WriteLine(compiler.FormatVariantName(variantOptions));
+                compiler.ClearDiagnostics();
+                var variant = compiler.CompileVariant(variantOptions);
+                foreach (var diagnostic in compiler.Diagnostics)
+                    presenter.Present(diagnostic.ConvertToSynKit());
+                if (variant == null)
+                    break;
+                setWriter.WriteVariant(variant);
+            }
+        }
+
+        using (var setReader = new ShaderSetFileReader(new FileStream("model.shadercache", FileMode.Open, FileAccess.Read)))
+        {
+            foreach (var shader in setReader.Shaders)
+                Console.WriteLine($"Reread shader \"{shader.Name}\" with {shader.VariantCount} variants");
         }
     }
 }

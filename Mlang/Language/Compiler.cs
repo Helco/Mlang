@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Generic.Polyfill;
 using System.IO;
@@ -44,6 +45,7 @@ public partial class Compiler : IDisposable
     private readonly string[] extraDownstreamOptions = Array.Empty<string>();
     internal ASTTranslationUnit? unit;
     private ShaderInfo? shaderInfo;
+    private VariantCollection? variants;
     private bool? parseSuccess;
     private bool disposedValue;
     private uint? sourceHash;
@@ -51,8 +53,11 @@ public partial class Compiler : IDisposable
 #if DEBUG
     public bool ThrowInternalErrors { get; set; } = true;
 #endif
+    internal IReadOnlyCollection<IOptionValueSet> AllVariants =>
+        variants ??= new(unit!.Blocks.OfType<ASTOption>().ToArray());
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
     public bool HasError => diagnostics.Any(d => d.Severity == Severity.Error || d.Severity == Severity.InternalError);
+    public ShaderInfo? ShaderInfo => shaderInfo;
     public bool OutputGeneratedSourceOnError { get; set; } = true;
     public bool OutputErrorsForVariantCompilation { get; set; } = true;
 
@@ -189,32 +194,7 @@ public partial class Compiler : IDisposable
             fragmentBytes!);
     }
 
-    internal IEnumerable<IOptionValueSet> AllVariants()
-    {
-        var options = unit!.Blocks.OfType<ASTOption>().ToArray();
-        var curVariant = 0u;
-        while(true)
-        {
-            yield return new BitsOptionValueSet(options, curVariant);
-            var nextVariant = null as uint?;
-            foreach (var option in options)
-            {
-                var bitMask = (1u << option.BitCount) - 1;
-                var nextValue = ((curVariant >> option.BitOffset) & bitMask) + 1;
-                if (nextValue < option.ValueCount)
-                {
-                    nextVariant = curVariant & ~((1u << (option.BitCount + option.BitOffset)) - 1);
-                    nextVariant |= nextValue << option.BitOffset;
-                    break;
-                }
-            }
-            if (nextVariant is null)
-                break;
-            curVariant = nextVariant.Value;
-        }
-    }
-
-    internal IEnumerable<string> AllVariantNames() => AllVariants().Select(FormatVariantName);
+    internal IEnumerable<string> AllVariantNames() => AllVariants.Select(FormatVariantName);
 
     private PipelineState ComposePipelineState(IOptionValueSet optionValues)
     {
@@ -268,6 +248,8 @@ public partial class Compiler : IDisposable
 
     private uint CollectOptionBits(IOptionValueSet optionValues)
     {
+        if (optionValues is BitsOptionValueSet bitsValueSet)
+            return bitsValueSet.OptionBits;
         var bits = 0u;
         foreach (var option in unit!.Blocks.OfType<ASTOption>())
         {
@@ -278,43 +260,11 @@ public partial class Compiler : IDisposable
         return bits;
     }
 
-    private string FormatVariantName(IOptionValueSet optionValues)
+    internal string FormatVariantName(IOptionValueSet optionValues)
     {
         if (shaderInfo == null)
             return "<unknown variant>";
-        var name = new StringBuilder();
-        foreach (var option in shaderInfo.Options)
-        {
-            if (option.NamedValues == null)
-            {
-                if (!optionValues.GetBool(option.Name))
-                    continue;
-                WriteSeparator();
-                name.Append(option.Name);
-            }
-            else
-            {
-                WriteSeparator();
-                name.Append(option.Name);
-                name.Append('=');
-                if (!optionValues.TryGetValue(option.Name, out var value))
-                    value = 0;
-                if (value < option.NamedValues.Length)
-                    name.Append(option.NamedValues[value]);
-                else
-                {
-                    name.Append("unknown");
-                    name.Append(value);
-                }
-            }
-        }
-        return name.ToString();
-
-        void WriteSeparator()
-        {
-            if (name.Length != 0)
-                name.Append(", ");
-        }
+        return shaderInfo.FormatVariantName(new(shaderInfo.SourceHash, CollectOptionBits(optionValues)));
     }
 
     private void CollectShaderInfo()

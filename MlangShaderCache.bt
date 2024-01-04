@@ -1,0 +1,142 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.2 Binary Template
+//
+//      File: MlangShaderCache.bt
+//   Authors: Helco
+//   Version: 0
+//   Purpose: Shader Cache
+//  Category: Games
+//  ID Bytes: 53 53 4C 4D
+//
+// Keep in mind that this format is considered
+// internal. This template should only be used to
+// debug Mlang itself.
+//------------------------------------------------
+
+LittleEndian();
+uint Magic;
+uint Version;
+uint ShaderCount;
+uint VariantCount;
+
+typedef struct {
+  local int64 lengthStart = FTell();
+  do
+  {
+    ubyte lengthRaw;
+  } while (lengthRaw[FTell() - lengthStart - 1] > 127);
+  local int64 lengthLength = FTell() - lengthStart;
+
+  local uint length = 0;
+  local int64 i;
+  for (i = 0; i < lengthLength; i++)
+    length += (lengthRaw[i] & 127) << (7 * i);
+  if (length > 0)
+    char data[length];
+
+} NetString <read=ReadNetString>;
+
+string ReadNetString(NetString& str)
+{
+  if (exists(str.data))
+    return str.data;
+  else
+    return "";
+}
+
+struct Shader
+{
+  uint sourceHash;
+  uint variantCount;
+  NetString name;
+  NetString source;
+} shaders[ShaderCount] <optimize=false>;
+
+struct VariantHeader
+{
+  uint optionBits;
+  uint offset;
+} variants[VariantCount];
+
+struct BlendFormula
+{
+  byte source, destination, function;
+};
+
+struct BlendAttachment
+{
+  byte hasColor;
+  if (hasColor)
+  {
+    byte hasAlpha;
+    BlendFormula color;
+    if (hasAlpha)
+      BlendFormula alpha;
+  }
+};
+
+struct StencilState
+{
+  byte comparison, pass, fail, depthFail;
+};
+
+struct ColorOutput
+{
+  NetString name;
+  byte format;
+};
+
+struct PipelineState
+{
+  byte coverageToAlpha;
+  float blendFactorR, blendFactorG, blendFactorB, blendFactorA;
+  uint blendAttachmentCount;
+  if (blendAttachmentCount > 0)
+    BlendAttachment blendAttachments[blendAttachmentCount] <optimize=false>;
+
+  byte depthTest, depthWrite;
+  byte stencilTest, stencilReadMask, stencilWriteMask;
+  uint stencilReference;
+  StencilState stencilFront, stencilBack;
+
+  byte cullMode, fillMode, frontFace;
+  byte depthClip, scissorTest;
+
+  byte primitiveTopology;
+  byte hasDepthOutput;
+  if (hasDepthOutput)
+    byte depthOutput;
+  uint colorOutputCount;
+  if (colorOutputCount > 0)
+    ColorOutput colorOutputs[colorOutputCount] <optimize=false>;
+  byte outputSamples;
+};
+
+struct NumericType
+{
+  byte scalar, columns, rows, scalarWidth, isNormalized;
+};
+
+struct VertexAttribute
+{
+  int index;
+  NetString name;
+  byte isInstance;
+  NumericType type;
+};
+
+struct Variant
+{
+  PipelineState pipelineState;
+  uint vertexAttributeCount;
+  if (vertexAttributeCount > 0)
+    VertexAttribute vertexAttributes[vertexAttributeCount] <optimize=false>;
+};
+
+local uint i;
+local int64 start = FTell();
+for (i = 0; i < VariantCount; i++)
+{
+  FSeek(start + variants[i].offset);
+  Variant variant;
+}

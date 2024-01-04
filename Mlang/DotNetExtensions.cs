@@ -39,6 +39,7 @@ internal static class DotNetExtensions
         writer.Write(v.X);
         writer.Write(v.Y);
         writer.Write(v.Z);
+        writer.Write(v.W);
     }
 
     public static T[] ReadArray<T>(this BinaryReader reader, Func<BinaryReader, T> readFunc)
@@ -58,7 +59,7 @@ internal static class DotNetExtensions
     }
 
     public static T? ReadNullable<T>(this BinaryReader reader, Func<BinaryReader, T> readFunc) where T : struct =>
-        reader.ReadBoolean() ? default(T?) : readFunc(reader);
+        reader.ReadBoolean() ? readFunc(reader) : default(T?);
 
     public static void Write<T>(this BinaryWriter writer, T? opt, Action<BinaryWriter, T> writeFunc) where T : struct
     {

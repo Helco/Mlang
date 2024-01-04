@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Mlang.Language;
+using System.Text;
 using Silk.NET.Core;
 
 namespace Mlang.Model;
@@ -59,6 +61,47 @@ public record ShaderInfo
             curBitOffset += option.BitCount;
         }
         return new(SourceHash, variantBits);
+    }
+
+    public string FormatVariantName(ShaderVariantKey variantKey)
+    {
+        if (variantKey.ShaderHash != SourceHash)
+            throw new ArgumentException("Invalid variant key for this shader");
+        var name = new StringBuilder();
+        int bitOffset = 0;
+        foreach (var option in Options)
+        {
+            var value = (variantKey.OptionBits >> bitOffset) & ((1u << option.BitCount) - 1);
+            bitOffset += option.BitCount;
+
+            if (option.NamedValues == null)
+            {
+                if (value == 0)
+                    continue;
+                WriteSeparator();
+                name.Append(option.Name);
+            }
+            else
+            {
+                WriteSeparator();
+                name.Append(option.Name);
+                name.Append('=');
+                if (value < option.NamedValues.Length)
+                    name.Append(option.NamedValues[value]);
+                else
+                {
+                    name.Append("unknown");
+                    name.Append(value);
+                }
+            }
+        }
+        return name.ToString();
+
+        void WriteSeparator()
+        {
+            if (name.Length != 0)
+                name.Append(", ");
+        }
     }
 }
 

@@ -32,6 +32,8 @@ internal class BitsOptionValueSet : IOptionValueSet
     private readonly ASTOption[] options;
     private readonly uint bits;
 
+    public uint OptionBits => bits;
+
     public BitsOptionValueSet(ASTOption[] options, uint bits)
     {
         this.options = options;

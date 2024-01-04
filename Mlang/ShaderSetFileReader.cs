@@ -70,12 +70,16 @@ internal class ShaderSetFileReader : IDisposable
     {
         stream.Position = startPositionOfVariants + variant.Offset;
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
+        var pipelineState = PipelineState.Read(reader);
+        var vertexAttributes = reader.ReadArray(VertexAttributeInfo.Read);
+        var bindingSetSizes = reader.ReadArray(static r => r.ReadInt32());
+        var bindings = reader.ReadArray(BindingInfo.Read);
         return new ShaderVariant(
             new(shaderHash, variant.OptionBits),
-            PipelineState.Read(reader),
-            reader.ReadArray(VertexAttributeInfo.Read),
-            reader.ReadArray(static r => r.ReadInt32()),
-            reader.ReadArray(BindingInfo.Read),
+            pipelineState,
+            vertexAttributes,
+            bindingSetSizes,
+            bindings,
             reader.ReadBytes(reader.ReadInt32()),
             reader.ReadBytes(reader.ReadInt32()));
     }
