@@ -50,7 +50,7 @@ internal class ShaderSetFileReader : IDisposable
             var curVariantOffset = 0u;
             for (uint i = 0; i < shaderCount; i++)
             {
-                shaders[i].SourceHash = reader.ReadUInt32();
+                shaders[i].Info = ShaderInfo.Read(reader);
                 shaders[i].VariantCount = reader.ReadUInt32();
                 shaders[i].Name = reader.ReadString();
                 shaders[i].Source = reader.ReadString();

@@ -67,4 +67,8 @@ internal static class DotNetExtensions
         if (opt != null)
             writeFunc(writer, opt.Value);
     }
+
+    // to be used for reading/writing arrays
+    public static void Write(BinaryWriter writer, string value) => writer.Write(value);
+    public static string ReadString(BinaryReader reader) => reader.ReadString();
 }

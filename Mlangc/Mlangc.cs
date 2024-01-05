@@ -138,7 +138,7 @@ fragment
 
         using (var setWriter = new ShaderSetFileWriter(new FileStream("model.shadercache", FileMode.OpenOrCreate, FileAccess.Write)))
         {
-            setWriter.AddShader(shaderInfo.SourceHash, "Model", Shader, (uint)compiler.AllVariants.Count);
+            setWriter.AddShader(shaderInfo, "Model", Shader, (uint)compiler.AllVariants.Count);
             foreach (var variantOptions in compiler.AllVariants)
             {
                 Console.WriteLine(compiler.FormatVariantName(variantOptions));

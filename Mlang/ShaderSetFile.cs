@@ -14,8 +14,8 @@ internal static class ShaderSetFile
 
     internal struct ShaderHeader
     {
+        public ShaderInfo Info;
         public string Name;
-        public uint SourceHash;
         public string? Source;
         public uint VariantOffset;
         public uint VariantCount;

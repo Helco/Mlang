@@ -30,16 +30,16 @@ internal class ShaderSetFileWriter : IDisposable
         writer = new(stream, Encoding.UTF8, leaveOpen: true);
     }
 
-    public void AddShader(uint sourceHash, string name, string? source, uint variantCount)
+    public void AddShader(ShaderInfo info, string name, string? source, uint variantCount)
     {
         ThrowIfFinished();
         if (variantBytes != null)
             throw new InvalidOperationException("First variant was written, cannot add shaders anymore");
         shaders.Add(new()
         {
+            Info = info,
             Name = name,
             Source = source,
-            SourceHash = sourceHash,
             VariantOffset = nextVariant,
             VariantCount = variantCount
         });
@@ -62,7 +62,7 @@ internal class ShaderSetFileWriter : IDisposable
         writer.Write(totalCount);
         foreach (var shader in shaders)
         {
-            writer.Write(shader.SourceHash);
+            shader.Info.Write(writer);
             writer.Write(shader.VariantCount);
             writer.Write(shader.Name);
             writer.Write(shader.Source ?? "");
@@ -76,7 +76,7 @@ internal class ShaderSetFileWriter : IDisposable
     {
         ThrowIfFinished();
         PrepareForVariantWriting();
-        int shaderI = shaders.FindIndex(s => s.SourceHash == variant.VariantKey.ShaderHash);
+        int shaderI = shaders.FindIndex(s => s.Info.SourceHash == variant.VariantKey.ShaderHash);
         if (shaderI < 0)
             throw new ArgumentException("Shader was not added to writer");
         uint variantI = nextShaderVariants[shaderI]++;

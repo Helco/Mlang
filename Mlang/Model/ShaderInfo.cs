@@ -14,6 +14,19 @@ public record OptionInfo(string name, string[]? namedValues = null)
 
     internal int BitCount => NamedValues == null ? 1 :
         (int)Math.Ceiling(Math.Log(NamedValues.Length) / Math.Log(2));
+
+    internal static void Write(BinaryWriter writer, OptionInfo info)
+    {
+        writer.Write(info.name);
+        writer.Write(info.NamedValues ?? Array.Empty<string>(), DotNetExtensions.Write);
+    }
+
+    internal static OptionInfo Read(BinaryReader reader)
+    {
+        var name = reader.ReadString();
+        var namedValues = reader.ReadArray(DotNetExtensions.ReadString);
+        return new(name, namedValues.None() ? null : namedValues);
+    }
 }
 
 public record VertexAttributeInfo
@@ -47,6 +60,24 @@ public record ShaderInfo
     public required IReadOnlyList<string> VertexAttributes { get; init; }
     public required IReadOnlyList<string> InstanceAttributes { get; init; }
     public required IReadOnlyList<string> Bindings { get; init; }
+
+    internal void Write(BinaryWriter writer)
+    {
+        writer.Write(SourceHash);
+        writer.Write(Options, OptionInfo.Write);
+        writer.Write(VertexAttributes, DotNetExtensions.Write);
+        writer.Write(InstanceAttributes, DotNetExtensions.Write);
+        writer.Write(Bindings, DotNetExtensions.Write);
+    }
+
+    internal static ShaderInfo Read(BinaryReader reader) => new()
+    {
+        SourceHash = reader.ReadUInt32(),
+        Options = reader.ReadArray(OptionInfo.Read),
+        VertexAttributes = reader.ReadArray(DotNetExtensions.ReadString),
+        InstanceAttributes = reader.ReadArray(DotNetExtensions.ReadString),
+        Bindings = reader.ReadArray(DotNetExtensions.ReadString),
+    };
 
     public ShaderVariantKey VariantKeyFor(IReadOnlyDictionary<string, uint> options)
     {
