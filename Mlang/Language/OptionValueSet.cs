@@ -68,7 +68,7 @@ internal class FilteredOptionValueSet : IOptionValueSet
         this.parent = parent;
         valueNames = options
             .Where(o => o.NamedValues != null)
-            .SelectMany(o => o.NamedValues.Select((name, index) => (name, index)))
+            .SelectMany(o => o.NamedValues!.Select((name, index) => (name, index)))
             .ToDictionary(t => t.name, t => (uint)t.index);
     }
 

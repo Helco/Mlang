@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+#if NETSTANDARD2_0
 using System.Collections.Generic.Polyfill;
+#endif
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -217,7 +219,7 @@ public partial class Compiler : IDisposable
                 (optionValues.TryGetValue(opt.Name, out var value) ? value : 0).ToString()))
             .Concat(allOptions
                 .Where(opt => opt.NamedValues?.Length > 0)
-                .SelectMany(opt => opt.NamedValues
+                .SelectMany(opt => opt.NamedValues!
                     .Select((name, index) => new KeyValuePair<string, string>(name, index.ToString()))))
             .ToArray();
     }

@@ -17,8 +17,8 @@ internal static class ShaderSetFile
         public ShaderInfo Info;
         public string Name;
         public string? Source;
-        public uint VariantOffset;
-        public uint VariantCount;
+        public int VariantOffset;
+        public int VariantCount;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = sizeof(uint))]

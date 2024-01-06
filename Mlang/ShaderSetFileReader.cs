@@ -18,7 +18,7 @@ internal class ShaderSetFileReader : IDisposable
     private bool disposedValue;
 
     public IReadOnlyList<ShaderSetFile.ShaderHeader> Shaders => shaders;
-    public ReadOnlySpan<ShaderSetFile.VariantHeader> Variants =>
+    public Span<ShaderSetFile.VariantHeader> Variants =>
         MemoryMarshal.Cast<byte, ShaderSetFile.VariantHeader>(variantHeaders);
 
     private ShaderSetFileReader(bool _, Stream stream, bool ownsStream)
@@ -32,6 +32,9 @@ internal class ShaderSetFileReader : IDisposable
     {
         ReadHeaders();
     }
+
+    // to save memory as we cannot use the byte array on .NET Standard 2.0
+    public void ClearVariants() => variantHeaders = Array.Empty<byte>();
 
     private unsafe void ReadHeaders()
     {
@@ -47,11 +50,11 @@ internal class ShaderSetFileReader : IDisposable
             variantCount = reader.ReadUInt32();
 
             shaders = new ShaderSetFile.ShaderHeader[shaderCount];
-            var curVariantOffset = 0u;
+            var curVariantOffset = 0;
             for (uint i = 0; i < shaderCount; i++)
             {
                 shaders[i].Info = ShaderInfo.Read(reader);
-                shaders[i].VariantCount = reader.ReadUInt32();
+                shaders[i].VariantCount = checked((int)reader.ReadUInt32());
                 shaders[i].Name = reader.ReadString();
                 shaders[i].Source = reader.ReadString();
                 if (shaders[i].Source?.Length is 0 or null)

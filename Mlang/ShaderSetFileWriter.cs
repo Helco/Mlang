@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Linq;
 using Mlang.Model;
 
 namespace Mlang;
@@ -13,10 +14,10 @@ internal class ShaderSetFileWriter : IDisposable
     private readonly bool ownsStream;
     private readonly BinaryWriter writer;
     private readonly List<ShaderSetFile.ShaderHeader> shaders = new();
-    private readonly List<uint> nextShaderVariants = new();
+    private readonly List<int> nextShaderVariants = new();
     private byte[]? variantBytes = null;
     private long startPositionOfHeaders, startPositionOfVariants;
-    private uint nextVariant;
+    private int nextVariant;
     private bool disposedValue;
     private bool finished;
 
@@ -30,11 +31,13 @@ internal class ShaderSetFileWriter : IDisposable
         writer = new(stream, Encoding.UTF8, leaveOpen: true);
     }
 
-    public void AddShader(ShaderInfo info, string name, string? source, uint variantCount)
+    public void AddShader(ShaderInfo info, string name, string? source, int variantCount)
     {
         ThrowIfFinished();
         if (variantBytes != null)
             throw new InvalidOperationException("First variant was written, cannot add shaders anymore");
+        if (variantCount < 0)
+            throw new ArgumentException("Variant count cannot be negative");
         shaders.Add(new()
         {
             Info = info,
@@ -43,7 +46,7 @@ internal class ShaderSetFileWriter : IDisposable
             VariantOffset = nextVariant,
             VariantCount = variantCount
         });
-        nextShaderVariants.Add(0u);
+        nextShaderVariants.Add(0);
         nextVariant += variantCount;
     }
 
@@ -51,7 +54,7 @@ internal class ShaderSetFileWriter : IDisposable
     {
         if (variantBytes != null)
             return;
-        int totalCount = checked((int)shaders.Sum(s => s.VariantCount));
+        int totalCount = shaders.Sum(s => s.VariantCount);
         variantBytes = new byte[sizeof(ShaderSetFile.VariantHeader) * totalCount];
         for (int i = 0; i < totalCount; i++) // No Array.Fill in .NET Standard 2.0
             Variants[i] = new() { OptionBits = uint.MaxValue, Offset = uint.MaxValue };
@@ -79,12 +82,12 @@ internal class ShaderSetFileWriter : IDisposable
         int shaderI = shaders.FindIndex(s => s.Info.SourceHash == variant.VariantKey.ShaderHash);
         if (shaderI < 0)
             throw new ArgumentException("Shader was not added to writer");
-        uint variantI = nextShaderVariants[shaderI]++;
+        int variantI = nextShaderVariants[shaderI]++;
         if (variantI >= shaders[shaderI].VariantCount)
             throw new InvalidOperationException("All allocated variants for this shader were already written");
         variantI += shaders[shaderI].VariantOffset;
 
-        Variants[(int)variantI] = new()
+        Variants[variantI] = new()
         {
             OptionBits = variant.VariantKey.OptionBits,
             Offset = checked((uint)(stream.Position - startPositionOfVariants))

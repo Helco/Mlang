@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Yoakke.SynKit.Text;
+#if NETSTANDARD2_0
 using System.Collections.Generic.Polyfill;
+#endif
 
 namespace Mlang;
 
