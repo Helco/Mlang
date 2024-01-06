@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Mlang\Mlang.csproj" />
+    <ProjectReference Include="..\Mlang.Compiler\Mlang.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

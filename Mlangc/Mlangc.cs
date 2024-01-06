@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Mlang;
 using Mlang.Language;
+using Mlang.Model;
 using Yoakke.SynKit.Reporting.Present;
 using Yoakke.SynKit.Text;
 
@@ -152,10 +153,10 @@ fragment
             }
         }
 
-        using (var setReader = new ShaderSetFileReader(new FileStream("model.shadercache", FileMode.Open, FileAccess.Read)))
-        {
-            foreach (var shader in setReader.Shaders)
-                Console.WriteLine($"Reread shader \"{shader.Name}\" with {shader.VariantCount} variants");
-        }
+        IShaderSet shaderSet = new FileShaderSet("model.shadercache");
+        var modelShaderInfo = shaderSet.GetShaderInfo("Model");
+        var modelVariant = shaderSet.GetVariant(new ShaderVariantKey(modelShaderInfo.SourceHash, 0u));
+        foreach (var attr in modelVariant.VertexAttributes)
+            Console.WriteLine($"{attr.Type.MlangName} {attr.Name}");
     }
 }

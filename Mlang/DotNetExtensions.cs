@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Mlang.Compiler")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Mlangc")]
 
 namespace Mlang;
