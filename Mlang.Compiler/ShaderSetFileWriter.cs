@@ -8,7 +8,7 @@ using Mlang.Model;
 
 namespace Mlang;
 
-internal class ShaderSetFileWriter : IDisposable
+public class ShaderSetFileWriter : IDisposable
 {
     private readonly Stream stream;
     private readonly bool ownsStream;

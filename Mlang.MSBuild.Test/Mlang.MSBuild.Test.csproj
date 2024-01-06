@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ShaderSetOutput>shader.mlss</ShaderSetOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mlang.MSBuild\Mlang.MSBuild.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+  <UsingTask TaskName="CompileMlangShaderSet" AssemblyFile="$(SolutionDir)/Mlang.MSBuild/bin/Debug/netstandard2.0/Mlang.MSBuild.dll" TaskFactory="TaskHostFactory" />
+
+  <ItemGroup>
+    <Shader Include="model.mlang"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvailableItemName Include="Shader"/>
+    <UpToDateCheckInput Include="@(Shader)"/>
+  </ItemGroup>
+  <Target Name="PreCompileShaders" BeforeTargets="CompileShaders">
+    <PropertyGroup>
+      <ShaderSetPath>$(IntermediateOutputPath)$(ShaderSetOutput)</ShaderSetPath>
+    </PropertyGroup>
+  </Target>
+  <Target Name="CompileShaders" BeforeTargets="CoreBuild" Inputs="@(Shader)" Outputs="$(ShaderSetPath)">
+    <CompileMlangShaderSet ShaderFiles="@(Shader)" OutputPath="$(ShaderSetPath)" />
+  </Target>
+
+</Project>

@@ -53,14 +53,14 @@ public partial class Compiler : IDisposable
     private uint? sourceHash;
 
 #if DEBUG
-    public bool ThrowInternalErrors { get; set; } = true;
+    public bool ThrowInternalErrors { get; set; } = false;
 #endif
     internal IReadOnlyCollection<IOptionValueSet> AllVariants =>
         variants ??= new(unit!.Blocks.OfType<ASTOption>().ToArray());
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
     public bool HasError => diagnostics.Any(d => d.Severity == Severity.Error || d.Severity == Severity.InternalError);
     public ShaderInfo? ShaderInfo => shaderInfo;
-    public bool OutputGeneratedSourceOnError { get; set; } = true;
+    public bool OutputGeneratedSourceOnError { get; set; } = false;
     public bool OutputErrorsForVariantCompilation { get; set; } = true;
 
     public Compiler(string fileName, string sourceText) :
