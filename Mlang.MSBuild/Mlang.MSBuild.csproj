@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../Package.props" />
   <PropertyGroup>
+    <Title>Mlang.MSBuild</Title>
+    <Description>MSBuild tasks for compiling Mlang shaders</Description>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
@@ -8,15 +11,22 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDependencyFile>true</GenerateDependencyFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <NoWarn>NU5100</NoWarn>
 
     <TargetsForTfmSpecificBuildOutput>
       $(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage
     </TargetsForTfmSpecificBuildOutput>
     <BuildOutputTargetFolder>tasks</BuildOutputTargetFolder>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="build\Mlang.MSBuild.props" PackagePath="build/"/>
+    <Content Include="build\Mlang.MSBuild.targets" PackagePath="build/"/>
+    <Content Include="_._" PackagePath="lib/netstandard2.0/_._"/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.8.3" PrivateAssets="all" ExcludeAssets="Runtime" />
+    <PackageReference Include="Silk.NET.Shaderc.Native" Version="2.20.0" PrivateAssets="all" GeneratePathProperty="true"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -25,14 +35,14 @@
     </ProjectReference>
   </ItemGroup>
 
-  <Target
-	  Name="CopyProjectReferencesToPackage"
-	  DependsOnTargets="ResolveReferences">
+  <Target Name="CopyProjectReferencesToPackage" DependsOnTargets="ResolveReferences">
     <ItemGroup>
+      
       <!-- The TargetPath is the path inside the package that the source file will be placed. This is already precomputed in the ReferenceCopyLocalPaths items' DestinationSubPath, so reuse it here. -->
-      <BuildOutputInPackage
-        Include="@(ReferenceCopyLocalPaths)"
-        TargetPath="%(ReferenceCopyLocalPaths.DestinationSubPath)" />
+      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)" TargetPath="%(ReferenceCopyLocalPaths.DestinationSubPath)" />
+      <TfmSpecificPackageFile Include="$(PkgSilk_NET_Shaderc_Native)/runtimes/**">
+        <PackagePath>tasks/netstandard2.0/runtimes/%(RecursiveDir)</PackagePath>
+      </TfmSpecificPackageFile>
     </ItemGroup>
   </Target>
 

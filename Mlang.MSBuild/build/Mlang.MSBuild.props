@@ -1,0 +1,18 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MlangShaderSetName>shaders.mlss</MlangShaderSetName>
+    <MlangShaderSetOutputDir/>
+    <MlangOutputGeneratedSourceOnError>false</MlangOutputGeneratedSourceOnError>
+    <MlangEmbedShaderSource>true</MlangEmbedShaderSource>
+    <_MlangAssemblyDir>$(MSBuildThisFileDirectory)../tasks/netstandard2.0</_MlangAssemblyDir>
+    <_MlangAssemblyPath>$(MlangAssemblyDir)/Mlang.MSBuild.dll</_MlangAssemblyPath>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <AvailableItemName Include="MlangShader"/>
+  </ItemGroup>
+
+  <UsingTask
+    TaskName="CompileMlangShaderSet"
+    AssemblyFile="$(_MlangAssemblyPath)"/>
+</Project>

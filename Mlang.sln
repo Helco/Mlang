@@ -7,11 +7,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mlang", "Mlang\Mlang.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mlangc", "Mlangc\Mlangc.csproj", "{DA763D00-D4F3-419C-BCA6-627DC5B4C8DA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mlang.Compiler", "Mlang.Compiler\Mlang.Compiler.csproj", "{FD57CAF7-DFE0-4A34-BEAA-421D559763C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mlang.Compiler", "Mlang.Compiler\Mlang.Compiler.csproj", "{FD57CAF7-DFE0-4A34-BEAA-421D559763C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mlang.MSBuild", "Mlang.MSBuild\Mlang.MSBuild.csproj", "{6A0968BD-DA92-4061-B033-899D86DE2F18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mlang.MSBuild", "Mlang.MSBuild\Mlang.MSBuild.csproj", "{6A0968BD-DA92-4061-B033-899D86DE2F18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mlang.MSBuild.Test", "Mlang.MSBuild.Test\Mlang.MSBuild.Test.csproj", "{197EDB39-E48C-4689-8335-159DD48A4F8C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mlang.MSBuild.Test", "Mlang.MSBuild.Test\Mlang.MSBuild.Test.csproj", "{197EDB39-E48C-4689-8335-159DD48A4F8C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{3E6C006F-2248-4C70-9F5E-25C237BB6B65}"
+	ProjectSection(SolutionItems) = preProject
+		Package.props = Package.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

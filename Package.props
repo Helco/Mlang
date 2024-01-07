@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Authors>Helco</Authors>
+    <PackageTags>Shader;Vulkan;Graphics</PackageTags>
+    <RepositoryUrl>https://github.com/Helco/Mlang</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+  </PropertyGroup>
+</Project>

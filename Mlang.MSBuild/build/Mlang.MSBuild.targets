@@ -1,0 +1,27 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <UpToDateCheckInput Include="@(MlangShader)"/>
+  </ItemGroup>
+
+  <Target Name="MlangSetupPaths" BeforeTargets="MlangCompile">
+    <PropertyGroup>
+      <MlangShaderSetOutputDir Condition="'$(MlangShaderSetOutputDir)' == ''">$(IntermediateOutputPath)</MlangShaderSetOutputDir>
+      <MlangShaderSetPath>$(MlangShaderSetOutputDir)$(MlangShaderSetName)</MlangShaderSetPath>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="MlangCompile" BeforeTargets="CoreBuild" Inputs="@(MlangShader)" Outputs="$(MlangShaderSetPath)">
+    <CompileMlangShaderSet
+      ShaderFiles="@(MlangShader)"
+      OutputPath="$(MlangShaderSetPath)"
+      OutputGeneratedSourceOnError="$(MlangOutputGeneratedSourceOnError)"
+      EmbedShaderSource="$(MlangEmbedShaderSource)"/>
+    <ItemGroup>
+      <FileWrites Include="$(MlangShaderSetPath)"/>
+      <EmbeddedResource Include="$(MlangShaderSetPath">
+        <LogicalName>$(MlangShaderSetName)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+  
+</Project>

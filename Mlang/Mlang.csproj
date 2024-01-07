@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../Package.props" />
   <PropertyGroup>
+    <Title>Mlang</Title>
+    <Description>Mlang is a GLSL preprocessor to more easily write multi-variant shaders. This package only includes loading precompiled shader sets.</Description>
     <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
