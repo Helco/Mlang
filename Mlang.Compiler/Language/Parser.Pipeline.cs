@@ -32,7 +32,7 @@ partial class Parser
         var state = new PartialPipelineState();
         switch(key.Text.ToLowerInvariant())
         {
-            case "coveragetoalpha": state.CoverageToAlpha = ParseBooleanValue("CoverageToAlpha", value); break;
+            case "alphatocoverage": state.AlphaToCoverage = ParseBooleanValue("AlphaToCoverage", value); break;
             case "depthtest": state.DepthTest = ParseBooleanValue("DepthTest", value); break;
             case "depthwrite": state.DepthWrite = ParseBooleanValue("DepthWrite", value); break;
             case "stenciltest": state.StencilTest = ParseBooleanValue("StencilTest", value); break;
@@ -77,7 +77,7 @@ partial class Parser
         var state = new PartialPipelineState();
         switch (key.Text.ToLowerInvariant())
         {
-            case "coveragetoalpha": state.CoverageToAlpha = true; break;
+            case "alphatocoverage": state.AlphaToCoverage = true; break;
             case "depthtest": state.DepthTest = true; break;
             case "depthwrite": state.DepthWrite = true; break;
             case "stenciltest": state.StencilTest = true; break;

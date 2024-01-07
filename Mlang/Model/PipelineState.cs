@@ -36,7 +36,7 @@ internal struct PartialStencilState
 
 internal class PartialPipelineState
 {
-    public bool? CoverageToAlpha;
+    public bool? AlphaToCoverage;
     public Vector4? BlendFactor;
     public BlendAttachment[] BlendAttachments = Array.Empty<BlendAttachment>();
 
@@ -64,7 +64,7 @@ internal class PartialPipelineState
 
     public void With(PartialPipelineState state)
     {
-        CoverageToAlpha = state.CoverageToAlpha ?? CoverageToAlpha;
+        AlphaToCoverage = state.AlphaToCoverage ?? AlphaToCoverage;
         BlendFactor = state.BlendFactor ?? BlendFactor;
         BlendAttachments = BlendAttachments.Concat(state.BlendAttachments).ToArray();
 
@@ -95,7 +95,7 @@ internal class PartialPipelineState
     public static PartialPipelineState AsDifference(PipelineState to, PipelineState from)
     {
         var state = new PartialPipelineState();
-        state.CoverageToAlpha = AsDifference(to.CoverageToAlpha, from.CoverageToAlpha);
+        state.AlphaToCoverage = AsDifference(to.AlphaToCoverage, from.AlphaToCoverage);
         state.BlendFactor = AsDifference(to.BlendFactor, from.BlendFactor);
         state.BlendAttachments = to.BlendAttachments.SequenceEqual(from.BlendAttachments)
             ? Array.Empty<BlendAttachment>()
@@ -134,7 +134,7 @@ internal class PartialPipelineState
 
 public record PipelineState
 {
-    public bool CoverageToAlpha { get; init; }
+    public bool AlphaToCoverage { get; init; }
     public Vector4 BlendFactor { get; init; }
     public required IReadOnlyList<BlendAttachment> BlendAttachments { get; init; }
 
@@ -176,7 +176,7 @@ public record PipelineState
 
     internal PipelineState With(PartialPipelineState s) => new()
     {
-        CoverageToAlpha = s.CoverageToAlpha ?? CoverageToAlpha,
+        AlphaToCoverage = s.AlphaToCoverage ?? AlphaToCoverage,
         BlendFactor = s.BlendFactor ?? BlendFactor,
         BlendAttachments =
             s.BlendAttachments.Concat(BlendAttachments)
@@ -210,7 +210,7 @@ public record PipelineState
 
     internal static PipelineState Read(BinaryReader reader) => new()
     {
-        CoverageToAlpha = reader.ReadBoolean(),
+        AlphaToCoverage = reader.ReadBoolean(),
         BlendFactor = reader.ReadVector4(),
         BlendAttachments = reader.ReadArray(BlendAttachment.Read),
 
@@ -237,7 +237,7 @@ public record PipelineState
 
     internal void Write(BinaryWriter writer)
     {
-        writer.Write(CoverageToAlpha);
+        writer.Write(AlphaToCoverage);
         writer.Write(BlendFactor);
         writer.Write(BlendAttachments, BlendAttachment.Write);
 
