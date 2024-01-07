@@ -91,6 +91,7 @@ partial class Compiler
                 infos.Add(new BindingInfo<StructureType>(set, binding, structName, structType, isInstance));
             }
         }
+        setSizes.Add(binding);
         return (setSizes, infos);
     }
 
