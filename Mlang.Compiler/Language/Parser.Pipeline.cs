@@ -43,6 +43,7 @@ partial class Parser
             case "stencilwritemask": state.StencilWriteMask = (byte)ParseInteger("StencilWriteMask", value, byte.MaxValue); break;
             case "stencilreference": state.StencilReference = (uint)ParseInteger("StencilReference", value, uint.MaxValue); break;
 
+            case "depthcomparison": state.DepthComparison = ParseComparisonKind(value); break;
             case "stencilcomparison": state.Stencil.Comparison = ParseComparisonKind(value); break;
             case "stencilpass": state.Stencil.Pass = ParseStencilOperation(value); break;
             case "stencilfail": state.Stencil.Fail = ParseStencilOperation(value); break;

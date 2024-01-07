@@ -40,6 +40,7 @@ internal class PartialPipelineState
     public Vector4? BlendFactor;
     public BlendAttachment[] BlendAttachments = Array.Empty<BlendAttachment>();
 
+    public ComparisonKind? DepthComparison;
     public bool? DepthTest;
     public bool? DepthWrite;
     public bool? StencilTest;
@@ -68,6 +69,7 @@ internal class PartialPipelineState
         BlendFactor = state.BlendFactor ?? BlendFactor;
         BlendAttachments = BlendAttachments.Concat(state.BlendAttachments).ToArray();
 
+        DepthComparison = state.DepthComparison ?? DepthComparison;
         DepthTest = state.DepthTest ?? DepthTest;
         DepthWrite = state.DepthWrite ?? DepthWrite;
         StencilTest = state.StencilTest ?? StencilTest;
@@ -101,6 +103,7 @@ internal class PartialPipelineState
             ? Array.Empty<BlendAttachment>()
             : to.BlendAttachments.ToArray();
 
+        state.DepthComparison = AsDifference(to.DepthComparison, from.DepthComparison);
         state.DepthTest = AsDifference(to.DepthTest, from.DepthTest);
         state.DepthWrite = AsDifference(to.DepthWrite, from.DepthWrite);
         state.StencilTest = AsDifference(to.StencilTest, from.StencilTest);
@@ -138,6 +141,7 @@ public record PipelineState
     public Vector4 BlendFactor { get; init; }
     public required IReadOnlyList<BlendAttachment> BlendAttachments { get; init; }
 
+    public ComparisonKind DepthComparison { get; init; }
     public bool DepthTest { get; init; }
     public bool DepthWrite { get; init; }
     public bool StencilTest { get; init; }
@@ -164,6 +168,7 @@ public record PipelineState
     {
         BlendAttachments = new BlendAttachment[attachmentCounts],
         ColorOutputs = new KeyValuePair<string, PixelFormat>[attachmentCounts],
+        DepthComparison = ComparisonKind.LessEqual,
         DepthTest = true,
         DepthWrite = true,
         CullMode = FaceCullMode.Back,
@@ -183,6 +188,7 @@ public record PipelineState
             .Take(Math.Max(s.BlendAttachments.Length, BlendAttachments.Count))
             .ToArray(),
 
+        DepthComparison = s.DepthComparison ?? DepthComparison,
         DepthTest = s.DepthTest ?? DepthTest,
         DepthWrite = s.DepthWrite ?? DepthWrite,
         StencilTest = s.StencilTest ?? StencilTest,
@@ -214,6 +220,7 @@ public record PipelineState
         BlendFactor = reader.ReadVector4(),
         BlendAttachments = reader.ReadArray(BlendAttachment.Read),
 
+        DepthComparison = (ComparisonKind)reader.ReadByte(),
         DepthTest = reader.ReadBoolean(),
         DepthWrite = reader.ReadBoolean(),
         StencilTest = reader.ReadBoolean(),
@@ -241,6 +248,7 @@ public record PipelineState
         writer.Write(BlendFactor);
         writer.Write(BlendAttachments, BlendAttachment.Write);
 
+        writer.Write((byte)DepthComparison);
         writer.Write(DepthTest);
         writer.Write(DepthWrite);
         writer.Write(StencilTest);
