@@ -20,8 +20,8 @@ public class CompileMlangShaderSet : Task
     [Required]
     public string OutputPath { get; set; } = "output.shadercache";
 
-    public bool OutputGeneratedSourceOnError = false;
-    public bool EmbedShaderSource = false;
+    public bool OutputGeneratedSourceOnError { get; set; } = false;
+    public bool EmbedShaderSource { get; set; } = false;
 
     private List<Diagnostic> diagnostics = new();
 

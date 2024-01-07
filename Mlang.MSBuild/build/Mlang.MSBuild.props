@@ -5,7 +5,7 @@
     <MlangOutputGeneratedSourceOnError>false</MlangOutputGeneratedSourceOnError>
     <MlangEmbedShaderSource>true</MlangEmbedShaderSource>
     <_MlangAssemblyDir>$(MSBuildThisFileDirectory)../tasks/netstandard2.0</_MlangAssemblyDir>
-    <_MlangAssemblyPath>$(MlangAssemblyDir)/Mlang.MSBuild.dll</_MlangAssemblyPath>
+    <_MlangAssemblyPath>$(_MlangAssemblyDir)/Mlang.MSBuild.dll</_MlangAssemblyPath>
   </PropertyGroup>
   
   <ItemGroup>

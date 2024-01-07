@@ -27,7 +27,7 @@
     </PropertyGroup>
   </Target>
   <Target Name="CompileShaders" BeforeTargets="CoreBuild" Inputs="@(Shader)" Outputs="$(ShaderSetPath)">
-    <CompileMlangShaderSet ShaderFiles="@(Shader)" OutputPath="$(ShaderSetPath)" />
+    <CompileMlangShaderSet ShaderFiles="@(Shader)" OutputPath="$(ShaderSetPath)" OutputGeneratedSourceOnError="true" EmbedShaderSource="true" />
   </Target>
 
 </Project>

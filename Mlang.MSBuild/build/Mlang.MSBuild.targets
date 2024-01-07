@@ -10,7 +10,7 @@
     </PropertyGroup>
   </Target>
 
-  <Target Name="MlangCompile" BeforeTargets="CoreBuild" Inputs="@(MlangShader)" Outputs="$(MlangShaderSetPath)">
+  <Target Name="MlangCompile" BeforeTargets="BeforeResGen" Inputs="@(MlangShader)" Outputs="$(MlangShaderSetPath)">
     <CompileMlangShaderSet
       ShaderFiles="@(MlangShader)"
       OutputPath="$(MlangShaderSetPath)"
@@ -18,8 +18,10 @@
       EmbedShaderSource="$(MlangEmbedShaderSource)"/>
     <ItemGroup>
       <FileWrites Include="$(MlangShaderSetPath)"/>
-      <EmbeddedResource Include="$(MlangShaderSetPath">
+      <EmbeddedResource Include="$(MlangShaderSetPath)">
         <LogicalName>$(MlangShaderSetName)</LogicalName>
+        <Type>Non-Resx</Type>
+        <WithCulture>false</WithCulture>
       </EmbeddedResource>
     </ItemGroup>
   </Target>
