@@ -46,4 +46,14 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CopyNativeBinariesToOutput" AfterTargets="CoreBuild">
+    <ItemGroup>
+      <NativeBinaries Include="$(PkgSilk_NET_Shaderc_Native)/runtimes/**"/>
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(NativeBinaries)"
+      DestinationFolder="$(OutDir)runtimes/%(RecursiveDir)"
+      SkipUnchangedFiles="true"/>
+  </Target>
+
 </Project>

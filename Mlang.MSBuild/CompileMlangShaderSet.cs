@@ -30,6 +30,7 @@ public class CompileMlangShaderSet : Task
     public override bool Execute()
     {
         var shaderCompilers = Array.Empty<Compiler>();
+        var wasSuccessful = false;
         try
         {
             using var setWriter = new ShaderSetFileWriter(
@@ -71,6 +72,7 @@ public class CompileMlangShaderSet : Task
                     return false;
             }
 
+            wasSuccessful = true;
             ReportDiagnosticBySeverity(Severity.Info, "MLANG0000", default, "Compiled {0} shader variants in total", [totalVariants]);
         }
         catch(IOException e)
@@ -83,6 +85,8 @@ public class CompileMlangShaderSet : Task
                 ReportDiagnostic(diagnostic);
             foreach (var compiler in shaderCompilers)
                 compiler?.Dispose();
+            if (!wasSuccessful)
+                File.Delete(OutputPath);
         }
         return !HasError;
     }

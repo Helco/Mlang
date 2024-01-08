@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Yoakke.SynKit.Text;
 using Silk.NET.Shaderc;
+using Silk.NET.Core.Loader;
+using Silk.NET.Core.Contexts;
 using ShadercCompiler = Silk.NET.Shaderc.Compiler;
 using ShadercCompileOptions = Silk.NET.Shaderc.CompileOptions;
 using ShadercCompilationResult = Silk.NET.Shaderc.CompilationResult;
@@ -14,7 +17,7 @@ namespace Mlang.Language;
 
 internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
 {
-    private readonly Shaderc api = Shaderc.GetApi();
+    private readonly Shaderc api = CreateShadercApi();
 
     private static readonly DiagnosticCategory CategoryShaderc = new("Shaderc");
     private static readonly DiagnosticType TypeGLSLError = CategoryShaderc.Create(Severity.Error, "{0}");
@@ -142,6 +145,41 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
         {
             this.bytes = bytes;
             Diagnostics = diagnostics;
+        }
+    }
+
+    private static Shaderc CreateShadercApi()
+    {
+        try
+        {
+            return Shaderc.GetApi();
+        }
+        catch(FileNotFoundException)
+        {
+            // Silk looks at many different places, but not enough for the custom MSBuild task
+            // unfortunately the name container is internal and we need it for modifying where
+            // it looks for the runtimes folder
+            // We inject the candidate for tasks/netstandard2.0/native-library.so then 
+            // Silk will create the correct candidate tasks/netstandard2.0/runtimes/... for us            
+            var shadercAssembly = typeof(Shaderc).Assembly;
+            var shadercNameContainer = shadercAssembly!.CreateInstance(
+                "Silk.NET.Shaderc.ShadercLibraryNameContainer") as SearchPathContainer
+                ?? throw new InvalidOperationException("Could not create instance of shaderc library name container type");
+            var pathResolver = new DefaultPathResolver();
+            var shadercPath = Path.Combine(Path.GetDirectoryName(shadercAssembly.Location)!, "alskdjalsdkj") ;
+            pathResolver.Resolvers.Insert(0, name =>
+            {
+                var shadercPath = Path.Combine(Path.GetDirectoryName(shadercAssembly.Location)!, name) ;
+                return new[] { shadercPath };
+            });
+            var libraryLoader = LibraryLoader.GetPlatformDefaultLoader();
+            foreach (var name in shadercNameContainer.GetLibraryNames())
+            {
+                if (UnmanagedLibrary.TryCreate(name, libraryLoader, pathResolver, out var library))
+                    return new Shaderc(new DefaultNativeContext(library));
+            }
+
+            throw;
         }
     }
 }
