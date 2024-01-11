@@ -296,6 +296,8 @@ public partial class Compiler : IDisposable
                 if (!list.Contains(decl.Name))
                     list.Add(decl.Name);
             }
+            if (block.StorageKind == TokenKind.KwInstances)
+                bindings.Add(block.NameForReflection);
         }
         shaderInfo = new()
         {
