@@ -17,7 +17,7 @@ option HasTexShift;
 option HasEnvMap;
 option Blend = IsOpaque, IsAlphaBlend, IsAdditiveBlend, IsAdditiveAlphaBlend;
 
-attributes
+attributes Geometry
 {
     float3 inPos;
     float3 inNormal;
@@ -25,7 +25,7 @@ attributes
     byte4_norm inColor;
 }
 
-attributes if (IsSkinned)
+attributes Skin if (IsSkinned)
 {
     float4 inWeights;
     byte4 inIndices;
@@ -33,7 +33,7 @@ attributes if (IsSkinned)
 
 instances mat4 world;
 instances if (HasTexShift) mat3x2 inTexShift;
-instances
+instances Colors
 {
     byte4_norm inTint;
     float inVertexColorFactor;

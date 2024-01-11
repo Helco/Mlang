@@ -91,10 +91,8 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         if (nonBindings.Any())
         {
             WriteBindingLayout(nonBindings.First(), forceStd430: true);
-            Writer.Write("uniform block_");
-            Writer.Write(block.Range.Start.Line);
-            Writer.Write('_');
-            Writer.Write(block.Range.Start.Column);
+            Writer.Write("uniform ");
+            Writer.Write(block.NameForGLSL);
             Writer.WriteLine(" {");
             PushIndent();
             foreach (var decl in nonBindings)

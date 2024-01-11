@@ -368,11 +368,12 @@ internal partial class Parser
         }]
     };
 
-    [Rule("StorageBlock: StorageBlockKind BlockCondition? ScopeBrL DeclarationStatement* ScopeBrR")]
-    private ASTGlobalBlock StorageBlock(Tk kind, ASTExpression? condition, Tk _0, IReadOnlyList<ASTDeclarationStatement> declarations, Tk _1) => new ASTStorageBlock()
+    [Rule("StorageBlock: StorageBlockKind Identifier? BlockCondition? ScopeBrL DeclarationStatement* ScopeBrR")]
+    private ASTGlobalBlock StorageBlock(Tk kind, Tk? name, ASTExpression? condition, Tk _0, IReadOnlyList<ASTDeclarationStatement> declarations, Tk _1) => new ASTStorageBlock()
     {
         Range = kind.Range,
         StorageKind = kind.Kind,
+        UserName = name?.Text,
         Condition = condition,
         Declarations = declarations.SelectMany(d => d.Declarations).ToArray()
     };

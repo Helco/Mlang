@@ -114,8 +114,14 @@ internal class ASTFunction : ASTGlobalBlock
 
 internal class ASTStorageBlock : ASTConditionalGlobalBlock
 {
+    public string? UserName { get; init; }
     public required TokenKind StorageKind { get; init; }
     public required ASTDeclaration[] Declarations { get; init; }
+
+    public string NameForGLSL => UserName ?? $"block_{Range.Start.Line + 1}_{Range.Start.Column + 1}";
+    public string NameForReflection => UserName ?? (Declarations.Length == 1
+        ? Declarations.Single().Name
+        : $"block_{Range.Start.Line + 1}_{Range.Start.Column + 1}");
 
     public override void Visit(IASTVisitor visitor)
     {

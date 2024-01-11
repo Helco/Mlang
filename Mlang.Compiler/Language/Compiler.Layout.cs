@@ -87,8 +87,7 @@ partial class Compiler
             if (structBinding != null)
             {
                 var structType = new StructureType(structMembers);
-                var structName = $"block_{block.Range.Start.Line}_{block.Range.Start.Column}";
-                infos.Add(new BindingInfo<StructureType>(set, structBinding.Value, structName, structType, isInstance));
+                infos.Add(new BindingInfo<StructureType>(set, structBinding.Value, block.NameForReflection, structType, isInstance));
             }
         }
         setSizes.Add(binding);
