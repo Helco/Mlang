@@ -20,7 +20,7 @@ attributes Skin if (IsSkinned)
 
 instances mat4 world;
 instances if (HasTexShift) mat3x2 inTexShift;
-instances Colors
+instances colors
 {
     byte4_norm inTint;
     float inVertexColorFactor;

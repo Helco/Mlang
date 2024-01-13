@@ -54,6 +54,8 @@ public record VertexAttributeInfo
 public record ShaderInfo
 {
     public required uint SourceHash { get; init; }
+    /// <summary>A bitmask for the option bits resulting in clearing bits that do not change the shader programs</summary>
+    public uint ProgramInvarianceMask { get; init; }
     public required IReadOnlyList<OptionInfo> Options { get; init; }
     public required IReadOnlyList<string> VertexAttributes { get; init; }
     public required IReadOnlyList<string> InstanceAttributes { get; init; }
@@ -62,6 +64,7 @@ public record ShaderInfo
     internal void Write(BinaryWriter writer)
     {
         writer.Write(SourceHash);
+        writer.Write(ProgramInvarianceMask);
         writer.Write(Options, OptionInfo.Write);
         writer.Write(VertexAttributes, DotNetExtensions.Write);
         writer.Write(InstanceAttributes, DotNetExtensions.Write);
@@ -71,6 +74,7 @@ public record ShaderInfo
     internal static ShaderInfo Read(BinaryReader reader) => new()
     {
         SourceHash = reader.ReadUInt32(),
+        ProgramInvarianceMask = reader.ReadUInt32(),
         Options = reader.ReadArray(OptionInfo.Read),
         VertexAttributes = reader.ReadArray(DotNetExtensions.ReadString),
         InstanceAttributes = reader.ReadArray(DotNetExtensions.ReadString),
@@ -90,6 +94,13 @@ public record ShaderInfo
             curBitOffset += option.BitCount;
         }
         return new(SourceHash, variantBits);
+    }
+
+    public ShaderVariantKey GetProgramInvariantKey(ShaderVariantKey variantKey)
+    {
+        if (variantKey.ShaderHash != SourceHash)
+            throw new ArgumentException($"Shader hash in argument does not match this shader instance");
+        return new(SourceHash, variantKey.OptionBits & ~ProgramInvarianceMask);
     }
 
     public string FormatVariantName(ShaderVariantKey variantKey)

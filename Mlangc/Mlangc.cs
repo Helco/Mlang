@@ -143,23 +143,31 @@ fragment
         if (compiler.HasError)
             return;
 
-        using (var setWriter = new ShaderSetFileWriter(new FileStream("model.shadercache", FileMode.OpenOrCreate, FileAccess.Write)))
+        using (var setWriter = new ShaderSetFileWriter(new FileStream("model.shadercache", FileMode.Create, FileAccess.Write)))
         {
             setWriter.AddShader(shaderInfo, "Model", Shader, compiler.AllVariants.Count);
-            foreach (var variantOptions in compiler.AllVariants)
+            foreach (var variantOptions in compiler.ProgramVariants)
             {
                 Console.WriteLine(compiler.FormatVariantName(variantOptions));
                 compiler.ClearDiagnostics();
-                var variant = compiler.CompileVariant(variantOptions);
+                var baseVariant = compiler.CompileVariant(variantOptions);
                 foreach (var diagnostic in compiler.Diagnostics)
                     presenter.Present(diagnostic.ConvertToSynKit());
-                if (variant == null)
+                if (baseVariant == null)
                     break;
-                setWriter.WriteVariant(variant);
+                foreach (var invariantOptions in compiler.ProgramInvariantsFor(variantOptions))
+                {
+                    var invariant = compiler.CompileVariant(invariantOptions, baseVariant);
+                    if (invariant == null)
+                        throw new ArgumentException("An invariant should always be compilable");
+                    setWriter.WriteVariant(invariant);
+                }
             }
         }
 
-        IShaderSet shaderSet = new FileShaderSet("model.shadercache");
+        var shaderSet = new FileShaderSet("model.shadercache");
+        Console.WriteLine($"Loaded shader set with {shaderSet.TotalVariantCount} variants");
+        shaderSet.LoadAll();
         var modelShaderInfo = shaderSet.GetShaderInfo("Model");
         var modelVariant = shaderSet.GetVariant(new ShaderVariantKey(modelShaderInfo.SourceHash, 0u));
         foreach (var attr in modelVariant.VertexAttributes)

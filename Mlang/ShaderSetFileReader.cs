@@ -77,6 +77,8 @@ internal class ShaderSetFileReader : IDisposable
         var vertexAttributes = reader.ReadArray(VertexAttributeInfo.Read);
         var bindingSetSizes = reader.ReadArray(static r => r.ReadInt32());
         var bindings = reader.ReadArray(BindingInfo.Read);
+        var programOffset = reader.ReadUInt32();
+        stream.Position = startPositionOfVariants + programOffset;
         return new ShaderVariant(
             new(shaderHash, variant.OptionBits),
             pipelineState,

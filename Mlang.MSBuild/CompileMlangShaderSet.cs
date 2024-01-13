@@ -34,7 +34,7 @@ public class CompileMlangShaderSet : Task
         try
         {
             using var setWriter = new ShaderSetFileWriter(
-                new FileStream(OutputPath, FileMode.OpenOrCreate, FileAccess.Write));
+                new FileStream(OutputPath, FileMode.Create, FileAccess.Write));
 
             shaderCompilers = ShaderFiles.Select(CreateShaderCompiler).ToArray();
             if (HasError)
@@ -60,13 +60,20 @@ public class CompileMlangShaderSet : Task
 
             foreach (var shaderCompiler in shaderCompilers)
             {
-                foreach (var variantOptions in shaderCompiler.AllVariants)
+                foreach (var variantOptions in shaderCompiler.ProgramVariants)
                 {
-                    var variant = shaderCompiler.CompileVariant(variantOptions);
-                    if (variant != null)
-                        setWriter.WriteVariant(variant);
+                    var baseVariant = shaderCompiler.CompileVariant(variantOptions);
                     diagnostics.AddRange(shaderCompiler.Diagnostics);
                     shaderCompiler.ClearDiagnostics();
+
+                    foreach (var invariantOptions in shaderCompiler.ProgramInvariantsFor(variantOptions))
+                    {
+                        var invariant = shaderCompiler.CompileVariant(invariantOptions, baseVariant);
+                        if (invariant == null)
+                            ReportDiagnosticBySeverity(Severity.InternalError, "MLANG0000", default, "Unexpectedly invariant could not be compiled", []);
+                        else
+                            setWriter.WriteVariant(invariant);
+                    }
                 }
                 if (HasError)
                     return false;

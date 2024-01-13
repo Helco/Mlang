@@ -20,6 +20,8 @@ public class FileShaderSet : IShaderSet
 #endif
 
     public IShaderSet? FallbackShaderSet { get; set; }
+    public int TotalVariantCount => allVariants.Length;
+    public int LoadedVariantCount => loadedVariants.Count;
 
     public FileShaderSet(string path) : this(new FileStream(path, FileMode.Open, FileAccess.Read)) { }
 

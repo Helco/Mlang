@@ -15,6 +15,7 @@ public class ShaderSetFileWriter : IDisposable
     private readonly BinaryWriter writer;
     private readonly List<ShaderSetFile.ShaderHeader> shaders = new();
     private readonly List<int> nextShaderVariants = new();
+    private readonly Dictionary<ShaderVariantKey, uint> invariantProgramOffsets = new();
     private byte[]? variantBytes = null;
     private long startPositionOfHeaders, startPositionOfVariants;
     private int nextVariant;
@@ -82,10 +83,11 @@ public class ShaderSetFileWriter : IDisposable
         int shaderI = shaders.FindIndex(s => s.Info.SourceHash == variant.VariantKey.ShaderHash);
         if (shaderI < 0)
             throw new ArgumentException("Shader was not added to writer");
+        var shaderInfo = shaders[shaderI];
         int variantI = nextShaderVariants[shaderI]++;
-        if (variantI >= shaders[shaderI].VariantCount)
+        if (variantI >= shaderInfo.VariantCount)
             throw new InvalidOperationException("All allocated variants for this shader were already written");
-        variantI += shaders[shaderI].VariantOffset;
+        variantI += shaderInfo.VariantOffset;
 
         Variants[variantI] = new()
         {
@@ -96,10 +98,20 @@ public class ShaderSetFileWriter : IDisposable
         writer.Write(variant.VertexAttributes, VertexAttributeInfo.Write);
         writer.Write(variant.BindingSetSizes, static (w, i) => w.Write(i));
         writer.Write(variant.Bindings, BindingInfo.Write);
-        writer.Write(variant.VertexShader.Length);
-        writer.Write(variant.VertexShader.ToArray());
-        writer.Write(variant.FragmentShader.Length);
-        writer.Write(variant.FragmentShader.ToArray());
+
+        var invariantKey = shaderInfo.Info.GetProgramInvariantKey(variant.VariantKey);
+        if (invariantProgramOffsets.TryGetValue(invariantKey, out var previousOffset))
+            writer.Write(previousOffset);
+        else
+        {
+            var newOffset = checked((uint)(stream.Position - startPositionOfVariants + sizeof(uint)));
+            invariantProgramOffsets.Add(invariantKey, newOffset);
+            writer.Write(newOffset);
+            writer.Write(variant.VertexShader.Length);
+            writer.Write(variant.VertexShader.ToArray());
+            writer.Write(variant.FragmentShader.Length);
+            writer.Write(variant.FragmentShader.ToArray());
+        }
     }
 
     public void Finish()

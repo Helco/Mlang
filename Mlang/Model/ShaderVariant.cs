@@ -48,4 +48,13 @@ public class ShaderVariant : IShaderVariantKeyable
         BindingSetSizes = bindingSetSizes;
         Bindings = bindings;
     }
+
+    internal ShaderVariant AsProgramInvariant(ShaderVariantKey newVariantKey, PipelineState newPipelineState) => new(
+        newVariantKey,
+        newPipelineState,
+        VertexAttributes,
+        BindingSetSizes,
+        Bindings,
+        vertexShader,
+        fragmentShader);
 }

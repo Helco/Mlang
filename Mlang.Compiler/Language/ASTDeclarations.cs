@@ -168,6 +168,7 @@ internal class ASTOption : ASTGlobalBlock
     public required int BitOffset { get; init; }
     public required string Name { get; init; }
     public required string[]? NamedValues { get; init; }
+    public bool IsProgramInvariant { get; set; }
     public int ValueCount => NamedValues?.Length ?? 2;
     public int BitCount => GetBitCount(ValueCount);
 

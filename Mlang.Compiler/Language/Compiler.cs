@@ -47,7 +47,7 @@ public partial class Compiler : IDisposable
     private readonly string[] extraDownstreamOptions = Array.Empty<string>();
     internal ASTTranslationUnit? unit;
     private ShaderInfo? shaderInfo;
-    private VariantCollection? variants;
+    private VariantCollection? allVariants, programVariants;
     private bool? parseSuccess;
     private bool disposedValue;
     private uint? sourceHash;
@@ -56,7 +56,15 @@ public partial class Compiler : IDisposable
     public bool ThrowInternalErrors { get; set; } = false;
 #endif
     internal IReadOnlyCollection<IOptionValueSet> AllVariants =>
-        variants ??= new(unit!.Blocks.OfType<ASTOption>().ToArray());
+        allVariants ??= new(unit!.Blocks.OfType<ASTOption>());
+    internal IReadOnlyCollection<IOptionValueSet> ProgramVariants =>
+        programVariants ??= new(unit!.Blocks.OfType<ASTOption>(), onlyWithVariance: false);
+    internal IReadOnlyCollection<IOptionValueSet> ProgramInvariantsFor(IOptionValueSet valueSet)
+    {
+        var baseOptionBits = CollectOptionBits(valueSet) & ~shaderInfo!.ProgramInvarianceMask;
+        return new VariantCollection(unit!.Blocks.OfType<ASTOption>(), onlyWithVariance: true, baseOptionBits);
+    }
+
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
     public bool HasError => diagnostics.Any(d => d.Severity == Severity.Error || d.Severity == Severity.InternalError);
     public ShaderInfo? ShaderInfo => shaderInfo;
@@ -102,6 +110,7 @@ public partial class Compiler : IDisposable
             CheckNamedOptionValues();
             CheckOptionConditions();
             CheckSpecialOptions();
+            CheckOptionProgramInvariance();
             CollectShaderInfo();
         }
         catch (Exception e)
@@ -119,14 +128,14 @@ public partial class Compiler : IDisposable
     public ShaderVariant? CompileVariant(IReadOnlyDictionary<string, uint>? optionValues_ = null) =>
         CompileVariant(new DictionaryOptionValueSet(optionValues_ ?? new Dictionary<string, uint>()));
     
-    internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues)
+    internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues, ShaderVariant? programInvariant = null)
     {
         if (!ParseShader())
             return null;
         int previousDiagCount = diagnostics.Count;
         try
         {
-            return CompileVariantIgnoringErrorOutput(userOptionValues);
+            return CompileVariantIgnoringErrorOutput(userOptionValues, programInvariant);
         }
         catch (Exception e)
 #if DEBUG
@@ -158,10 +167,21 @@ public partial class Compiler : IDisposable
         return null;
     }
 
-    internal ShaderVariant? CompileVariantIgnoringErrorOutput(IOptionValueSet userOptionValues)
+    internal ShaderVariant? CompileVariantIgnoringErrorOutput(IOptionValueSet userOptionValues, ShaderVariant? programInvariant = null)
     {
         var optionValues = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), userOptionValues);
+        var optionBits = CollectOptionBits(optionValues);
+        var shaderHash = HashShaderSource();
+        var variantKey = new ShaderVariantKey(shaderHash, optionBits);
         var pipelineState = ComposePipelineState(optionValues);
+
+        if (programInvariant != null)
+        {
+            if (shaderInfo!.GetProgramInvariantKey(variantKey) != shaderInfo.GetProgramInvariantKey(programInvariant.VariantKey))
+                throw new ArgumentException($"Given program invariant is not valid for requested variant");
+            return programInvariant.AsProgramInvariant(variantKey, pipelineState);
+        }
+
         var vertexStageBlock = FindStageBlock(TokenKind.KwVertex, optionValues);
         var fragmentStageBlock = FindStageBlock(TokenKind.KwFragment, optionValues);
         if (vertexStageBlock == null || fragmentStageBlock == null)
@@ -182,10 +202,6 @@ public partial class Compiler : IDisposable
         var macros = CollectMacros(optionValues);
         var vertexBytes = CompileStage(vertexGLSL.ToString(), TokenKind.KwVertex, macros);
         var fragmentBytes = CompileStage(fragmentGLSL.ToString(), TokenKind.KwFragment, macros);
-
-        var shaderHash = HashShaderSource();
-        var optionBits = CollectOptionBits(optionValues);
-        var variantKey = new ShaderVariantKey(shaderHash, optionBits);
         return HasError ? null : new(
             variantKey,
             pipelineState,
@@ -276,6 +292,9 @@ public partial class Compiler : IDisposable
         var options = unit.Blocks.OfType<ASTOption>()
             .Select(opt => new OptionInfo(opt.Name, opt.NamedValues))
             .ToArray();
+        var programInvarianceMask = 0u;
+        foreach (var block in unit.Blocks.OfType<ASTOption>().Where(b => b.IsProgramInvariant))
+            programInvarianceMask |= ((1u << block.BitCount) - 1) << block.BitOffset;
 
         var attributes = new List<string>();
         var instances = new List<string>();
@@ -302,6 +321,7 @@ public partial class Compiler : IDisposable
         shaderInfo = new()
         {
             SourceHash = HashShaderSource(),
+            ProgramInvarianceMask = programInvarianceMask,
             Options = options,
             VertexAttributes = attributes,
             InstanceAttributes = instances,
@@ -439,6 +459,19 @@ public partial class Compiler : IDisposable
         fragmentStage.Visit(visitor);
 
         return visitor.UsedVariables.Select(name => allDecls[name]).ToHashSet();
+    }
+
+    private void CheckOptionProgramInvariance()
+    {
+        var potentiallyVariantOptions = unit?.Blocks.OfType<ASTOption>().ToDictionary(o => o.Name, o => o);
+        if (potentiallyVariantOptions == null || potentiallyVariantOptions.None())
+            return;
+        var visitor = new OptionProgramVarianceVisitor(potentiallyVariantOptions);
+        unit!.Visit(visitor);
+
+        // all remaining options do not effect the shader programs
+        foreach (var option in potentiallyVariantOptions.Values)
+            option.IsProgramInvariant = true;
     }
 
     protected virtual void Dispose(bool disposing)

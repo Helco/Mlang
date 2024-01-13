@@ -7,20 +7,31 @@ namespace Mlang.Language;
 
 internal class VariantCollection : IReadOnlyCollection<IOptionValueSet>
 {
-    private readonly ASTOption[] options;
+    private readonly bool? onlyWithVariance;
+    private readonly uint baseOptionBits;
+    private readonly ASTOption[] allOptions;
 
-    public VariantCollection(ASTOption[] options) => this.options = options;
+    private IEnumerable<ASTOption> RelevantOptions => onlyWithVariance.HasValue
+        ? allOptions.Where(o => o.IsProgramInvariant == onlyWithVariance)
+        : allOptions;
 
-    public int Count => options.Aggregate(1, (c, o) => c * o.ValueCount);
+    public VariantCollection(IEnumerable<ASTOption> options, bool? onlyWithVariance = null, uint baseOptionBits = 0)
+    {
+        allOptions = options.OrderBy(o => o.BitOffset).ToArray();
+        this.onlyWithVariance = onlyWithVariance;
+        this.baseOptionBits = baseOptionBits;
+    }
+
+    public int Count => RelevantOptions.Aggregate(1, (c, o) => c * o.ValueCount);
 
     public IEnumerator<IOptionValueSet> GetEnumerator()
     {
         var curVariant = 0u;
         while(true)
         {
-            yield return new BitsOptionValueSet(options, curVariant);
+            yield return new BitsOptionValueSet(allOptions, curVariant | baseOptionBits);
             var nextVariant = null as uint?;
-            foreach (var option in options)
+            foreach (var option in RelevantOptions)
             {
                 var bitMask = (1u << option.BitCount) - 1;
                 var nextValue = ((curVariant >> option.BitOffset) & bitMask) + 1;
