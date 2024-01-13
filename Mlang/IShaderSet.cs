@@ -9,6 +9,7 @@ namespace Mlang;
 
 public interface IShaderSet : IDisposable
 {
+    public bool TryGetShaderInfo(uint shaderHash, [NotNullWhen(true)] out ShaderInfo? shaderInfo);
     public bool TryGetShaderInfo(string name, [NotNullWhen(true)] out ShaderInfo? shaderInfo);
     public bool TryGetSource(uint shaderHash, out string source);
     public bool TryGetVariant(ShaderVariantKey key, [NotNullWhen(true)] out ShaderVariant? variant);
@@ -18,6 +19,10 @@ public interface IShaderSet : IDisposable
 
 public static class ShaderSetExtensions
 {
+    public static ShaderInfo GetShaderInfo(this IShaderSet set, uint shaderHash) =>
+        set.TryGetShaderInfo(shaderHash, out var info) ? info
+        : throw new KeyNotFoundException($"ShaderSet does not contain shader with hash {shaderHash:X8}");
+
     public static ShaderInfo GetShaderInfo(this IShaderSet set, string name) =>
         set.TryGetShaderInfo(name, out var info) ? info
         : throw new KeyNotFoundException($"ShaderSet does not contain shader named: {name}");

@@ -68,6 +68,16 @@ public class FileShaderSet : IShaderSet
 
     public void ClearLoaded() => loadedVariants.Clear();
 
+
+    public bool TryGetShaderInfo(uint hash, [NotNullWhen(true)] out ShaderInfo? shaderInfo)
+    {
+        var shader = reader.Shaders.FirstOrDefault(s => s.Info.SourceHash == hash);
+        shaderInfo = shader.Info;
+        if (shaderInfo != null)
+            return true;
+        return FallbackShaderSet?.TryGetShaderInfo(hash, out shaderInfo) ?? false;
+    }
+
     public bool TryGetShaderInfo(string name, [NotNullWhen(true)] out ShaderInfo? shaderInfo)
     {
         var shader = reader.Shaders.FirstOrDefault(s => s.Name == name);
