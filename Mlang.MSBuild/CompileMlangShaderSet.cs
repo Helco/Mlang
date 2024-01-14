@@ -65,6 +65,8 @@ public class CompileMlangShaderSet : Task
                     var baseVariant = shaderCompiler.CompileVariant(variantOptions);
                     diagnostics.AddRange(shaderCompiler.Diagnostics);
                     shaderCompiler.ClearDiagnostics();
+                    if (baseVariant == null)
+                        continue;
 
                     foreach (var invariantOptions in shaderCompiler.ProgramInvariantsFor(variantOptions))
                     {
