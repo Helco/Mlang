@@ -105,7 +105,9 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     private void WriteDeclaration(ASTDeclaration declaration, string prefix, bool asStatement, string? namePrefix = null)
     {
+        // TODO: Rewrite this, maybe we *DO* need pre- and post-visit functions for the IASTVisitor interface?
         var mlangVisitor = new MlangOutputVisitor(Writer);
+        var undecorated = declaration.Type is ASTBufferType bufferType ? bufferType.Inner : declaration.Type;
         if (!string.IsNullOrWhiteSpace(prefix) && declaration.Type is not ASTBufferType)
         {
             Writer.Write(prefix);
@@ -116,7 +118,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         if (namePrefix != null)
             Writer.Write(namePrefix);
         Writer.Write(declaration.Name);
-        if (declaration.Type is ASTArrayType array)
+        if (undecorated is ASTArrayType array)
         {
             Writer.Write('[');
             array.Size?.Visit(mlangVisitor);
