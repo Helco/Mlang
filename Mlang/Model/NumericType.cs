@@ -55,7 +55,10 @@ public readonly record struct NumericType(
             return false;
         compatible = this with
         {
-            Scalar = Scalar == ScalarType.Float || IsNormalized ? ScalarType.Float : ScalarType.Int,
+            Scalar =
+                Scalar == ScalarType.Float || IsNormalized ? ScalarType.Float :
+                Scalar == ScalarType.Int ? ScalarType.Int
+                : ScalarType.UInt,
             ScalarWidth = ScalarWidth.DWord,
             IsNormalized = false,
         };
