@@ -46,7 +46,7 @@ internal class GLSLVertexOutputVisitor : GLSLOutputVisitor
                 break;
             case TokenKind.KwInstances when IsInstanced:
                 WriteLocationStorageBlock(block, "in");
-                WriteInstanceVarying(block, "out");
+                WriteInstanceVarying(block, "out", withNamePrefix: true);
                 break;
             case TokenKind.KwInstances when !IsInstanced:
                 WriteUniformBlock(block);

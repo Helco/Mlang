@@ -73,12 +73,13 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         Writer.WriteLine();
     }
 
-    protected void WriteInstanceVarying(ASTStorageBlock block, string prefix)
+    protected void WriteInstanceVarying(ASTStorageBlock block, string declPrefix, bool withNamePrefix)
     {
         foreach (var decl in block.Declarations.Where(context.TransferredInstanceVars.Contains))
         {
             WriteLocationLayout(decl, useOutLocation: true);
-            WriteDeclaration(decl, prefix, asStatement: true, TransferredInstancePrefix);
+            WriteDeclaration(decl, declPrefix, asStatement: true,
+                withNamePrefix ? TransferredInstancePrefix : null);
         }
         Writer.WriteLine();
     }

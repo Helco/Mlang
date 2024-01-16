@@ -151,6 +151,7 @@ fragment
             }, (variantOptions, loopState) =>
             {
                 using var variantCompiler = compiler.CreateVariantCompiler();
+                variantCompiler.OutputGeneratedSourceOnError = true;
                 var baseVariant = variantCompiler.CompileVariant(variantOptions);
                 if (variantCompiler.Diagnostics.Any())
                 {

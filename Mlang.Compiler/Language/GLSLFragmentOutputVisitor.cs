@@ -44,7 +44,7 @@ internal class GLSLFragmentOutputVisitor : GLSLOutputVisitor
                 WriteUniformBlock(block);
                 break;
             case TokenKind.KwInstances when IsInstanced:
-                WriteLocationStorageBlock(block, "flat in");
+                WriteInstanceVarying(block, "flat in", withNamePrefix: false);
                 break;
             case TokenKind.KwInstances when !IsInstanced:
                 WriteUniformBlock(block);
