@@ -53,9 +53,10 @@ public partial class VariantCompiler : IDisposable
 
     internal ShaderVariant? CompileVariant(IOptionValueSet userOptionValues, ShaderVariant? programInvariant = null)
     {
+        ShaderVariantKey variantKey = new(shaderInfo.SourceHash, 0);
         try
         {
-            return CompileVariantIgnoringErrorOutput(userOptionValues, programInvariant);
+            return CompileVariantIgnoringErrorOutput(userOptionValues, programInvariant, out variantKey);
         }
         catch (Exception e)
 #if DEBUG
@@ -64,14 +65,19 @@ public partial class VariantCompiler : IDisposable
         {
             diagnostics.Add(DiagInternal(e));
         }
+        finally
+        {
+            if (diagnostics.Any())
+                diagnostics.Insert(0, DiagStartOfVariant(shaderInfo.FormatVariantName(variantKey)));
+        }
         return null;
     }
 
-    internal ShaderVariant? CompileVariantIgnoringErrorOutput(IOptionValueSet userOptionValues, ShaderVariant? programInvariant = null)
+    private ShaderVariant? CompileVariantIgnoringErrorOutput(IOptionValueSet userOptionValues, ShaderVariant? programInvariant, out ShaderVariantKey variantKey)
     {
         var optionValues = new FilteredOptionValueSet(options, userOptionValues);
         var optionBits = optionValues.CollectOptionBits(options);
-        var variantKey = new ShaderVariantKey(shaderInfo.SourceHash, optionBits);
+        variantKey = new ShaderVariantKey(shaderInfo.SourceHash, optionBits);
         var pipelineState = ComposePipelineState(optionValues);
 
         if (programInvariant != null)
