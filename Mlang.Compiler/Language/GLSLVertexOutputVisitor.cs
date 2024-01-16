@@ -9,12 +9,9 @@ internal class GLSLVertexOutputVisitor : GLSLOutputVisitor
 {
     public GLSLVertexOutputVisitor(
         ASTStageBlock stageBlock,
-        PipelineState pipeline,
-        IOptionValueSet optionValues,
-        ISet<ASTDeclaration> transferredInstanceVars,
-        IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layout,
-        TextWriter outputWriter) :
-        base(stageBlock, pipeline, optionValues, transferredInstanceVars, layout, outputWriter)
+        TextWriter outputWriter,
+        GLSLOutputContext context) :
+        base(stageBlock, outputWriter, context)
     {
     }
 

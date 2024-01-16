@@ -9,12 +9,9 @@ internal class GLSLFragmentOutputVisitor : GLSLOutputVisitor
 {
     public GLSLFragmentOutputVisitor(
         ASTStageBlock stageBlock,
-        PipelineState pipeline,
-        IOptionValueSet optionValues,
-        ISet<ASTDeclaration> transferredInstanceVars,
-        IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layout,
-        TextWriter outputWriter) : 
-        base(stageBlock, pipeline, optionValues, transferredInstanceVars, layout, outputWriter)
+        TextWriter outputWriter,
+        GLSLOutputContext context) : 
+        base(stageBlock, outputWriter, context)
     {
     }
 
@@ -29,7 +26,7 @@ internal class GLSLFragmentOutputVisitor : GLSLOutputVisitor
     {
         WritePreamble();
         WriteApplicableStorageBlocks(unit);
-        foreach (var (i, (name, format)) in pipeline.ColorOutputs.Indexed())
+        foreach (var (i, (name, format)) in context.Pipeline.ColorOutputs.Indexed())
             WriteColorOutput(i, name, format);
         WriteFunctions(unit);
         WriteMainFunction(withInstanceVarTransfers: false);

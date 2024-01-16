@@ -6,31 +6,30 @@ using Mlang.Model;
 
 namespace Mlang.Language;
 
+internal class GLSLOutputContext
+{
+    public required PipelineState Pipeline { get; init; }
+    public required IOptionValueSet OptionValues { get; init; }
+    public required ISet<ASTDeclaration> TransferredInstanceVars { get; init; }
+    public required IReadOnlyDictionary<ASTDeclaration, LayoutInfo> LayoutInfos { get; init; }
+}
+
 internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 {
     protected const string TransferredInstancePrefix = ShaderCompiler.TransferredInstancePrefix;
 
     protected readonly ASTStageBlock stageBlock;
-    protected readonly PipelineState pipeline;
-    protected readonly IOptionValueSet optionValues;
-    protected readonly ISet<ASTDeclaration> transferredInstanceVars;
-    protected readonly IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layoutInfos;
-    protected bool IsInstanced => optionValues.GetBool(ShaderCompiler.IsInstancedOptionName);
+    protected readonly GLSLOutputContext context;
+    protected bool IsInstanced => context.OptionValues.GetBool(ShaderCompiler.IsInstancedOptionName);
 
     protected GLSLOutputVisitor(
         ASTStageBlock stageBlock,
-        PipelineState pipeline,
-        IOptionValueSet optionValues,
-        ISet<ASTDeclaration> transferredInstanceVars,
-        IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layout,
-        TextWriter outputWriter)
+        TextWriter outputWriter,
+        GLSLOutputContext context)
         : base(new CodeWriter(outputWriter, disposeWriter: false))
     {
         this.stageBlock = stageBlock;
-        this.pipeline = pipeline;
-        this.optionValues = optionValues;
-        this.transferredInstanceVars = transferredInstanceVars;
-        this.layoutInfos = layout;
+        this.context = context;
     }
 
     public override bool Visit(ASTNode node) => node switch
@@ -53,7 +52,8 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     protected void WriteApplicableStorageBlocks(ASTTranslationUnit unit)
     {
-        foreach (var block in unit.Blocks.OfType<ASTStorageBlock>().Where(b => b.EvaluateCondition(optionValues)))
+        foreach (var block in unit.Blocks.OfType<ASTStorageBlock>()
+            .Where(b => b.EvaluateCondition(context.OptionValues)))
             block.Visit(this);
     }
 
@@ -75,7 +75,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     protected void WriteInstanceVarying(ASTStorageBlock block, string prefix)
     {
-        foreach (var decl in block.Declarations.Where(transferredInstanceVars.Contains))
+        foreach (var decl in block.Declarations.Where(context.TransferredInstanceVars.Contains))
         {
             WriteLocationLayout(decl, useOutLocation: true);
             WriteDeclaration(decl, prefix, asStatement: true, TransferredInstancePrefix);
@@ -143,9 +143,9 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         Writer.WriteLine("void main() {");
         PushIndent();
 
-        if (withInstanceVarTransfers && transferredInstanceVars.Count > 0)
+        if (withInstanceVarTransfers && context.TransferredInstanceVars.Any())
         {
-            foreach (var decl in transferredInstanceVars)
+            foreach (var decl in context.TransferredInstanceVars)
             {
                 Writer.Write(TransferredInstancePrefix);
                 Writer.Write(decl.Name);
@@ -189,7 +189,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     private bool Write(ASTSelection selection)
     {
-        if (!selection.Condition.TryOptionEvaluate(optionValues, out var value))
+        if (!selection.Condition.TryOptionEvaluate(context.OptionValues, out var value))
             return base.Visit(selection);
         if (value == 0)
             selection.Else?.Visit(this);
@@ -200,7 +200,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     private void WriteLocationLayout(ASTDeclaration decl, bool useOutLocation = false)
     {
-        var layout = layoutInfos[decl];
+        var layout = context.LayoutInfos[decl];
         var location = useOutLocation ? layout.OutLocation : layout.InLocation;
         if (location == null)
             return;
@@ -211,7 +211,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     private void WriteBindingLayout(ASTDeclaration decl, bool forceStd430 = false)
     {
-        var layout = layoutInfos[decl];
+        var layout = context.LayoutInfos[decl];
         if (layout.Binding == null || layout.Set == null)
             return;
         if (decl.Type is ASTBufferType)

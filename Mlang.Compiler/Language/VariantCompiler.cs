@@ -94,8 +94,15 @@ public partial class VariantCompiler : IDisposable
 
         using var vertexGLSL = new StringWriter();
         using var fragmentGLSL = new StringWriter();
-        var vertexVisitor = new GLSLVertexOutputVisitor(vertexStageBlock, pipelineState, optionValues, transferredInstanceVars, layoutInfos, vertexGLSL);
-        var fragmentVisitor = new GLSLFragmentOutputVisitor(fragmentStageBlock, pipelineState, optionValues, transferredInstanceVars, layoutInfos, fragmentGLSL);
+        var glslContext = new GLSLOutputContext()
+        {
+            Pipeline = pipelineState,
+            OptionValues = optionValues,
+            TransferredInstanceVars = transferredInstanceVars,
+            LayoutInfos = layoutInfos
+        };
+        var vertexVisitor = new GLSLVertexOutputVisitor(vertexStageBlock, vertexGLSL, glslContext);
+        var fragmentVisitor = new GLSLFragmentOutputVisitor(fragmentStageBlock, fragmentGLSL, glslContext);
         unit.Visit(vertexVisitor);
         unit.Visit(fragmentVisitor);
 
