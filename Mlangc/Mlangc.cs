@@ -128,7 +128,6 @@ fragment
         Console.WriteLine("Hello, World!");
         var compiler = new ShaderCompiler("model.mlang", Shader)
         {
-            OutputGeneratedSourceOnError = true,
 #if DEBUG
             ThrowInternalErrors = true
 #endif
@@ -143,26 +142,38 @@ fragment
         if (compiler.HasError)
             return;
 
+        object consoleLock = new();
         using (var setWriter = new ShaderSetFileWriter(new FileStream("model.shadercache", FileMode.Create, FileAccess.Write)))
         {
             setWriter.AddShader(shaderInfo, "Model", Shader, compiler.AllVariants.Count);
-            foreach (var variantOptions in compiler.ProgramVariants)
+            Parallel.ForEach(compiler.ProgramVariants, new ParallelOptions()
             {
-                Console.WriteLine(compiler.FormatVariantName(variantOptions));
-                compiler.ClearDiagnostics();
-                var baseVariant = compiler.CompileVariant(variantOptions);
-                foreach (var diagnostic in compiler.Diagnostics)
-                    presenter.Present(diagnostic.ConvertToSynKit());
-                if (baseVariant == null)
-                    break;
+            }, (variantOptions, loopState) =>
+            {
+                using var variantCompiler = compiler.CreateVariantCompiler();
+                var baseVariant = variantCompiler.CompileVariant(variantOptions);
+                if (variantCompiler.Diagnostics.Any())
+                {
+                    lock (consoleLock)
+                    {
+                        foreach (var diagnostic in variantCompiler.Diagnostics)
+                            presenter.Present(diagnostic.ConvertToSynKit());
+                        if (baseVariant == null)
+                        {
+                            loopState.Stop();
+                            return;
+                        }
+                    }
+                }
                 foreach (var invariantOptions in compiler.ProgramInvariantsFor(variantOptions))
                 {
-                    var invariant = compiler.CompileVariant(invariantOptions, baseVariant);
+                    var invariant = variantCompiler.CompileVariant(invariantOptions, baseVariant);
                     if (invariant == null)
                         throw new ArgumentException("An invariant should always be compilable");
-                    setWriter.WriteVariant(invariant);
+                    lock(setWriter)
+                        setWriter.WriteVariant(invariant);
                 }
-            }
+            });
         }
 
         var shaderSet = new FileShaderSet("model.shadercache");

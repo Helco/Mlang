@@ -1,17 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
+#if NETSTANDARD2_0
 using System.Collections.Generic.Polyfill;
+#endif
 using System.Linq;
 using Mlang.Model;
 using static Mlang.Diagnostics;
+using static Mlang.Language.ShaderCompiler;
 
 namespace Mlang.Language;
 
-partial class ShaderCompiler
+internal readonly struct LayoutInfo
+{
+    public readonly int? InLocation;
+    public readonly int? OutLocation;
+    public readonly int? Binding;
+    public readonly int? Set;
+
+    private LayoutInfo(int? inLocation = null, int? outLocation = null, int? binding = null, int? set = null)
+    {
+        InLocation = inLocation;
+        OutLocation = outLocation;
+        Binding = binding;
+        Set = set;
+    }
+
+    public static LayoutInfo CreateInLocation(int location) => new(inLocation: location);
+    public static LayoutInfo CreateLocation(int? location) => new(location, location);
+    public LayoutInfo WithOutLocation(int outLocation) => new(InLocation, outLocation, Binding, Set);
+    public static LayoutInfo CreateBinding(int set, int binding) => new(binding: binding, set: set);
+}
+
+partial class VariantCompiler
 {
     private IEnumerable<ASTStorageBlock> GetStorageBlocksOfKind(TokenKind storageKind) =>
-        unit?.Blocks.OfType<ASTStorageBlock>().Where(b => b.StorageKind == storageKind)
-        ?? Enumerable.Empty<ASTStorageBlock>();
+        unit.Blocks.OfType<ASTStorageBlock>().Where(b => b.StorageKind == storageKind);
 
     private IReadOnlyList<VertexAttributeInfo> LayoutVertexAttributes(IOptionValueSet optionValues)
     {
@@ -32,7 +55,7 @@ partial class ShaderCompiler
                 else
                     diagnostics.Add(DiagNonNumericVertexAttribute(sourceFile, decl));
 
-                decl.Layout = ASTLayoutInfo.CreateInLocation(location);
+                layoutInfos[decl] = LayoutInfo.CreateInLocation(location);
                 infos.Add(new()
                 {
                     AttributeIndex = location,
@@ -65,7 +88,7 @@ partial class ShaderCompiler
             {
                 if (decl.Type.IsBindingType)
                 {
-                    decl.Layout = ASTLayoutInfo.CreateBinding(set, binding);
+                    layoutInfos[decl] = LayoutInfo.CreateBinding(set, binding);
                     infos.Add(decl.Type switch
                     {
                         ASTImageType type => new BindingInfo<ImageType>(set, binding, decl.Name, type.Type),
@@ -79,7 +102,7 @@ partial class ShaderCompiler
                 {
                     structBinding ??= binding++;
                     structMembers.Add((decl.Name, numericType.Type));
-                    decl.Layout = ASTLayoutInfo.CreateBinding(set, structBinding.Value);
+                    layoutInfos[decl] = LayoutInfo.CreateBinding(set, structBinding.Value);
                 }
                 else
                     diagnostics.Add(DiagNonNumericNorBindingUniform(sourceFile, decl));
@@ -111,8 +134,8 @@ partial class ShaderCompiler
         var blocks = GetStorageBlocksOfKind(TokenKind.KwVarying).Where(b => b.EvaluateCondition(optionValues));
         int location = 0;
         foreach (var decl in blocks.SelectMany(b => b.Declarations))
-            decl.Layout = ASTLayoutInfo.CreateLocation(location++);
+            layoutInfos[decl] = LayoutInfo.CreateLocation(location++);
         foreach (var decl in transferredInstanceVars)
-            decl.Layout = decl.Layout.WithOutLocation(location++);
+            layoutInfos[decl] = layoutInfos.GetValueOrDefault(decl).WithOutLocation(location++);
     }
 }

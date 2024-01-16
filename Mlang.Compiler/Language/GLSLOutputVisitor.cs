@@ -14,6 +14,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
     protected readonly PipelineState pipeline;
     protected readonly IOptionValueSet optionValues;
     protected readonly ISet<ASTDeclaration> transferredInstanceVars;
+    protected readonly IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layoutInfos;
     protected bool IsInstanced => optionValues.GetBool(ShaderCompiler.IsInstancedOptionName);
 
     protected GLSLOutputVisitor(
@@ -21,6 +22,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         PipelineState pipeline,
         IOptionValueSet optionValues,
         ISet<ASTDeclaration> transferredInstanceVars,
+        IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layout,
         TextWriter outputWriter)
         : base(new CodeWriter(outputWriter, disposeWriter: false))
     {
@@ -28,6 +30,7 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         this.pipeline = pipeline;
         this.optionValues = optionValues;
         this.transferredInstanceVars = transferredInstanceVars;
+        this.layoutInfos = layout;
     }
 
     public override bool Visit(ASTNode node) => node switch
@@ -197,7 +200,8 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     private void WriteLocationLayout(ASTDeclaration decl, bool useOutLocation = false)
     {
-        var location = useOutLocation ? decl.Layout.OutLocation : decl.Layout.InLocation;
+        var layout = layoutInfos[decl];
+        var location = useOutLocation ? layout.OutLocation : layout.InLocation;
         if (location == null)
             return;
         Writer.Write("layout(location = ");
@@ -207,7 +211,8 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
 
     private void WriteBindingLayout(ASTDeclaration decl, bool forceStd430 = false)
     {
-        if (decl.Layout.Binding == null || decl.Layout.Set == null)
+        var layout = layoutInfos[decl];
+        if (layout.Binding == null || layout.Set == null)
             return;
         if (decl.Type is ASTBufferType)
             forceStd430 = true;
@@ -216,9 +221,9 @@ internal abstract class GLSLOutputVisitor : MlangOutputVisitor
         if (forceStd430)
             Writer.Write("std430, ");
         Writer.Write("set = ");
-        Writer.Write(decl.Layout.Set);
+        Writer.Write(layout.Set);
         Writer.Write(", binding = ");
-        Writer.Write(decl.Layout.Binding);
+        Writer.Write(layout.Binding);
         Writer.Write(") ");
     }
 }

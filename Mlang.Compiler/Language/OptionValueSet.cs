@@ -18,6 +18,20 @@ internal static class IOptionValueSetExtensions
     public static bool GetBool(this IOptionValueSet set, string name, bool required = false) => required
         ? set.GetValue(name) != 0
         : set.TryGetValue(name, out var value) ? value != 0 : false;
+
+    internal static uint CollectOptionBits(this IOptionValueSet optionValues, IEnumerable<ASTOption> options)
+    {
+        if (optionValues is BitsOptionValueSet bitsValueSet)
+            return bitsValueSet.OptionBits;
+        var bits = 0u;
+        foreach (var option in options)
+        {
+            uint value;
+            optionValues.TryGetValue(option.Name, out value);
+            bits |= (value & ((1u << option.BitCount) - 1u)) << option.BitOffset;
+        }
+        return bits;
+    }
 }
 
 internal class DictionaryOptionValueSet : IOptionValueSet

@@ -12,8 +12,9 @@ internal class GLSLVertexOutputVisitor : GLSLOutputVisitor
         PipelineState pipeline,
         IOptionValueSet optionValues,
         ISet<ASTDeclaration> transferredInstanceVars,
+        IReadOnlyDictionary<ASTDeclaration, LayoutInfo> layout,
         TextWriter outputWriter) :
-        base(stageBlock, pipeline, optionValues, transferredInstanceVars, outputWriter)
+        base(stageBlock, pipeline, optionValues, transferredInstanceVars, layout, outputWriter)
     {
     }
 

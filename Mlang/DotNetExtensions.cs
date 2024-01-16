@@ -10,6 +10,11 @@ namespace Mlang;
 
 internal static class DotNetExtensions
 {
+#if NETSTANDARD2_0
+    public static TValue GetValueOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dict, TKey key) =>
+        dict.TryGetValue(key, out var value) ? value : default!;
+#endif
+
     public static ulong Sum(this IEnumerable<ulong> set) =>
         set.Aggregate((a, b) => a + b);
 

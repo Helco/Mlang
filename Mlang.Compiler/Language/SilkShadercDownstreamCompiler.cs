@@ -27,6 +27,8 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
     private static readonly DiagnosticType TypeUnknownError = CategoryShaderc.Create(
         Severity.Error, "No error message, shaderc returned {0}");
 
+    public void Dispose() => api.Dispose();
+
     public IDownstreamCompilationResult Compile(string source, TokenKind stage, IEnumerable<KeyValuePair<string, string>> macros, IEnumerable<string> extraOptions)
     {
         ShadercCompiler* compiler = null;

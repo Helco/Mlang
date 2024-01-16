@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Policy;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using Mlang.Language;
@@ -12,7 +13,7 @@ using static Mlang.MSBuild.MSBuildDiagnostics;
 
 namespace Mlang.MSBuild;
 
-public class CompileMlangShaderSet : Task
+public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
 {
     [Required]
     public ITaskItem[] ShaderFiles { get; set; } = Array.Empty<ITaskItem>();
@@ -22,6 +23,7 @@ public class CompileMlangShaderSet : Task
 
     public bool OutputGeneratedSourceOnError { get; set; } = false;
     public bool EmbedShaderSource { get; set; } = false;
+    public bool RunInParallel { get; set; } = true;
 
     private List<Diagnostic> diagnostics = new();
 
@@ -29,6 +31,10 @@ public class CompileMlangShaderSet : Task
 
     public override bool Execute()
     {
+        var forOptions = new ParallelOptions()
+        {
+            MaxDegreeOfParallelism = RunInParallel ? -1 : 1
+        };
         var shaderCompilers = Array.Empty<ShaderCompiler>();
         var wasSuccessful = false;
         try
@@ -40,12 +46,16 @@ public class CompileMlangShaderSet : Task
             if (HasError)
                 return false;
 
-            foreach (var shaderCompiler in shaderCompilers)
+            Parallel.ForEach(shaderCompilers, forOptions, shaderCompiler =>
             {
                 shaderCompiler.ParseShader();
-                diagnostics.AddRange(shaderCompiler.Diagnostics);
-                shaderCompiler.ClearDiagnostics();
-            }
+                if (shaderCompiler.Diagnostics.Any())
+                {
+                    lock(diagnostics)
+                        diagnostics.AddRange(shaderCompiler.Diagnostics);
+                    shaderCompiler.ClearDiagnostics();
+                }
+            });
             if (HasError)
                 return false;
 
@@ -58,30 +68,40 @@ public class CompileMlangShaderSet : Task
                 totalVariants += shaderCompiler.AllVariants.Count;
             }
 
-            foreach (var shaderCompiler in shaderCompilers)
-            {
-                foreach (var variantOptions in shaderCompiler.ProgramVariants)
-                {
-                    var baseVariant = shaderCompiler.CompileVariant(variantOptions);
-                    diagnostics.AddRange(shaderCompiler.Diagnostics);
-                    shaderCompiler.ClearDiagnostics();
-                    if (baseVariant == null)
-                        continue;
+            var allProgramVariants = shaderCompilers.SelectMany(
+                c => c.ProgramVariants.Select(v => (shaderCompiler: c, variantOptions: v)));
 
-                    foreach (var invariantOptions in shaderCompiler.ProgramInvariantsFor(variantOptions))
+            Parallel.ForEach(allProgramVariants, forOptions, (t, loopState) =>
+            {
+                using var variantCompiler = t.shaderCompiler.CreateVariantCompiler();
+                variantCompiler.OutputGeneratedSourceOnError = OutputGeneratedSourceOnError;
+                var baseVariant = variantCompiler.CompileVariant(t.variantOptions);
+                if (variantCompiler.Diagnostics.Any())
+                {
+                    lock (diagnostics)
+                        diagnostics.AddRange(variantCompiler.Diagnostics);
+                }
+                variantCompiler.ClearDiagnostics();
+                if (baseVariant == null)
+                    return;
+
+                foreach (var invariantOptions in t.shaderCompiler.ProgramInvariantsFor(t.variantOptions))
+                {
+                    var invariant = variantCompiler.CompileVariant(invariantOptions, baseVariant);
+                    if (invariant == null)
                     {
-                        var invariant = shaderCompiler.CompileVariant(invariantOptions, baseVariant);
-                        if (invariant == null)
+                        lock (diagnostics)
                             ReportDiagnosticBySeverity(Severity.InternalError, "MLANG0000", default, "Unexpectedly invariant could not be compiled", []);
-                        else
+                    }
+                    else
+                    {
+                        lock (setWriter)
                             setWriter.WriteVariant(invariant);
                     }
                 }
-                if (HasError)
-                    return false;
-            }
+            }); // TODO: Reuse downstream compiler per thread
 
-            wasSuccessful = true;
+            wasSuccessful = !HasError;
             ReportDiagnosticBySeverity(Severity.Info, "MLANG0000", default, "Compiled {0} shader variants in total", [totalVariants]);
         }
         catch(IOException e)
@@ -97,7 +117,7 @@ public class CompileMlangShaderSet : Task
             if (!wasSuccessful)
                 File.Delete(OutputPath);
         }
-        return !HasError;
+        return wasSuccessful;
     }
 
     private ShaderCompiler CreateShaderCompiler(ITaskItem item)
