@@ -29,7 +29,7 @@ public class CompileMlangShaderSet : Task
 
     public override bool Execute()
     {
-        var shaderCompilers = Array.Empty<Compiler>();
+        var shaderCompilers = Array.Empty<ShaderCompiler>();
         var wasSuccessful = false;
         try
         {
@@ -100,11 +100,11 @@ public class CompileMlangShaderSet : Task
         return !HasError;
     }
 
-    private Compiler CreateShaderCompiler(ITaskItem item)
+    private ShaderCompiler CreateShaderCompiler(ITaskItem item)
     {
         try
         {
-            return new Compiler(item.ItemSpec, new FileStream(item.ItemSpec, FileMode.Open, FileAccess.Read));
+            return new ShaderCompiler(item.ItemSpec, new FileStream(item.ItemSpec, FileMode.Open, FileAccess.Read));
         }
         catch(IOException e)
         {

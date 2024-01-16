@@ -7,7 +7,7 @@ using static Mlang.Diagnostics;
 
 namespace Mlang.Language;
 
-partial class Compiler
+partial class ShaderCompiler
 {
     private IEnumerable<ASTStorageBlock> GetStorageBlocksOfKind(TokenKind storageKind) =>
         unit?.Blocks.OfType<ASTStorageBlock>().Where(b => b.StorageKind == storageKind)

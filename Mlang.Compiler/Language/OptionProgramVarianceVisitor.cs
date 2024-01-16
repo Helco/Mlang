@@ -23,7 +23,7 @@ internal class OptionProgramVarianceVisitor : IASTVisitor
         if (node is ASTVariable variable)
             remainingOptions.Remove(variable.Name);
         if (node is ASTStorageBlock { StorageKind: TokenKind.KwInstances })
-            remainingOptions.Remove(Compiler.IsInstancedOptionName);
+            remainingOptions.Remove(ShaderCompiler.IsInstancedOptionName);
         return true;
     }
 }

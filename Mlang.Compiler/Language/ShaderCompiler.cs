@@ -17,6 +17,7 @@ namespace Mlang.Language;
 
 internal interface IDownstreamCompilationResult
 {
+
     bool HasError { get; }
     IReadOnlyCollection<Diagnostic> Diagnostics { get; }
     ReadOnlySpan<byte> Result { get; }
@@ -31,7 +32,7 @@ internal interface IDownstreamCompiler
         IEnumerable<string> extraOptions);
 }
 
-public partial class Compiler : IDisposable
+public partial class ShaderCompiler : IDisposable
 {
     private const int BufferSize = 1024; // the documented default StreamReader buffer
     internal const int MaxVariantBits = 16;
@@ -71,10 +72,10 @@ public partial class Compiler : IDisposable
     public bool OutputGeneratedSourceOnError { get; set; } = false;
     public bool OutputErrorsForVariantCompilation { get; set; } = true;
 
-    public Compiler(string fileName, string sourceText) :
+    public ShaderCompiler(string fileName, string sourceText) :
         this(fileName, new MemoryStream(Encoding.UTF8.GetBytes(sourceText))) { }
 
-    public Compiler(string fileName, Stream stream, bool disposeStream = true)
+    public ShaderCompiler(string fileName, Stream stream, bool disposeStream = true)
     {
         sourceStream = stream;
         var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, BufferSize, leaveOpen: !disposeStream);

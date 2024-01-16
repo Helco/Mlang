@@ -126,7 +126,7 @@ fragment
     static void Main(string[] args)
     {
         Console.WriteLine("Hello, World!");
-        var compiler = new Compiler("model.mlang", Shader)
+        var compiler = new ShaderCompiler("model.mlang", Shader)
         {
             OutputGeneratedSourceOnError = true,
 #if DEBUG
