@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Yoakke.SynKit.Text;
+using System.Globalization;
 #if NETSTANDARD2_0
 using System.Collections.Generic.Polyfill;
 #endif
@@ -47,6 +48,8 @@ internal class CodeWriter : IDisposable
 
     public CodeWriter(TextWriter writer, int indent = 0, bool disposeWriter = true)
     {
+        if (writer.FormatProvider != CultureInfo.InvariantCulture)
+            throw new InvalidOperationException("Target of a code writer really should be culture invariant");
         this.writer = writer;
         this.indent = indent;
         this.disposeWriter = disposeWriter;
@@ -88,7 +91,16 @@ internal class CodeWriter : IDisposable
         AdvanceBy(parts.Last());
     }
 
-    public void Write(object? o) => Write(o?.ToString() ?? "<null>");
+    public void Write(object? o)
+    {
+        // we cannot use ToString as this bypasses the invariant culture format provider
+        if (o is null)
+            Write("<null>");
+        else if (o is IFormattable formattable)
+            Write(formattable.ToString(null, CultureInfo.InvariantCulture));
+        else
+            Write(o.ToString() ?? "<null>");
+    }
 
     public void WriteLine()
     {

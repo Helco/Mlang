@@ -106,7 +106,7 @@ vertex
         uv = vec2(-reflect(incident, inNormal));
     }
     if (HasTexShift)
-        uv = inTexShift * vec3(uv, 1);
+        uv = inTexShift * vec3(uv, 1.4);
 	varUV = uv;
 
 	varColor = inColor;

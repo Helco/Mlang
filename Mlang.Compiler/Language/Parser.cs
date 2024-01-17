@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Mlang.Model;
 using Yoakke.SynKit.Parser;
@@ -45,14 +46,14 @@ internal partial class Parser
     private ASTExpression PrimaryExpressionInt(Tk literal) => new ASTIntegerLiteral()
     {
         Range = literal.Range,
-        Value = long.Parse(literal.Text)
+        Value = long.Parse(literal.Text, CultureInfo.InvariantCulture)
     };
 
     [Rule("PrimaryExpression: UnsignedReal")]
     private ASTExpression PrimaryExpressionReal(Tk literal) => new ASTRealLiteral()
     {
         Range = literal.Range,
-        Value = double.Parse(literal.Text)
+        Value = double.Parse(literal.Text, CultureInfo.InvariantCulture)
     };
     
     [Rule("PrimaryExpression: Identifier")]
@@ -399,7 +400,7 @@ internal partial class Parser
 
     [Rule("AnyNumber: Subtract? (UnsignedInteger | UnsignedReal)")]
     private float AnyNumber(Tk? minus, Tk unsigned) =>
-        (minus == null ? 1.0f : -1.0f) * float.Parse(unsigned.Text);
+        (minus == null ? 1.0f : -1.0f) * float.Parse(unsigned.Text, CultureInfo.InvariantCulture);
 
     [Rule("PipelineDeclaration: KwBlend BlendFormula BlendFormula? Semicolon")]
     private PartialPipelineState PipelineDeclarationBlend(Tk _0, BlendFormula color, BlendFormula? alpha, Tk _1) => new PartialPipelineState()

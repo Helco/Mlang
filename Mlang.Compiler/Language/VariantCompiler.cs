@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+
 
 #if NETSTANDARD2_0
 using System.Collections.Generic.Polyfill;
@@ -98,8 +100,8 @@ public partial class VariantCompiler : IDisposable
         var (bindingSetSizes, bindings) = LayoutBindings(optionValues);
         LayoutVarying(optionValues, transferredInstanceVars);
 
-        using var vertexGLSL = new StringWriter();
-        using var fragmentGLSL = new StringWriter();
+        using var vertexGLSL = new StringWriter(CultureInfo.InvariantCulture);
+        using var fragmentGLSL = new StringWriter(CultureInfo.InvariantCulture);
         var glslContext = new GLSLOutputContext()
         {
             Pipeline = pipelineState,
