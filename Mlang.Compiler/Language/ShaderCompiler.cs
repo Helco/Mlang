@@ -161,9 +161,9 @@ public partial class ShaderCompiler : IDisposable
         foreach (var block in unit.Blocks.OfType<ASTOption>().Where(b => b.IsProgramInvariant))
             programInvarianceMask |= ((1u << block.BitCount) - 1) << block.BitOffset;
 
-        var attributes = new List<string>();
-        var instances = new List<string>();
-        var bindings = new List<string>();
+        var attributes = new HashSet<string>();
+        var instances = new HashSet<string>();
+        var bindings = new HashSet<string>();
         foreach (var block in unit.Blocks.OfType<ASTStorageBlock>())
         {
             var list = block.StorageKind switch
@@ -173,13 +173,7 @@ public partial class ShaderCompiler : IDisposable
                 TokenKind.KwUniform => bindings,
                 _ => null
             };
-            if (list == null)
-                continue;
-            foreach (var decl in block.Declarations)
-            {
-                if (!list.Contains(decl.Name))
-                    list.Add(decl.Name);
-            }
+            list?.UnionWith(block.Declarations.Select(d => d.Name));
             if (block.StorageKind == TokenKind.KwInstances)
                 bindings.Add(block.NameForReflection);
         }
@@ -188,9 +182,9 @@ public partial class ShaderCompiler : IDisposable
             SourceHash = HashShaderSource(),
             ProgramInvarianceMask = programInvarianceMask,
             Options = options,
-            VertexAttributes = attributes,
-            InstanceAttributes = instances,
-            Bindings = bindings
+            VertexAttributes = attributes.ToArray(),
+            InstanceAttributes = instances.ToArray(),
+            Bindings = bindings.ToArray()
         };
     }
 
