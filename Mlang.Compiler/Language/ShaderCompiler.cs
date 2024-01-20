@@ -166,16 +166,21 @@ public partial class ShaderCompiler : IDisposable
         var bindings = new HashSet<string>();
         foreach (var block in unit.Blocks.OfType<ASTStorageBlock>())
         {
-            var list = block.StorageKind switch
+            switch (block.StorageKind)
             {
-                TokenKind.KwAttributes => attributes,
-                TokenKind.KwInstances => instances,
-                TokenKind.KwUniform => bindings,
-                _ => null
-            };
-            list?.UnionWith(block.Declarations.Select(d => d.Name));
-            if (block.StorageKind == TokenKind.KwInstances)
-                bindings.Add(block.NameForReflection);
+                case TokenKind.KwAttributes:
+                    attributes.UnionWith(block.Declarations.Select(d => d.Name));
+                    break;
+                case TokenKind.KwInstances:
+                    instances.UnionWith(block.Declarations.Select(d => d.Name));
+                    bindings.Add(block.NameForReflection);
+                    break;
+                case TokenKind.KwUniform:
+                    bindings.UnionWith(block.Declarations.Where(d => d.Type.IsBindingType).Select(d => d.Name));
+                    if (block.Declarations.Any(d => !d.Type.IsBindingType))
+                        bindings.Add(block.NameForReflection);
+                    break;
+            }
         }
         ShaderInfo = new()
         {
