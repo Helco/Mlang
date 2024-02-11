@@ -132,10 +132,21 @@ fragment
         Console.WriteLine("Hello, World!");
         Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath ?? ".") ?? ".";
         File.WriteAllText("model.mlang", Shader);
+        File.WriteAllText("model2.mlang", Shader + "\n//comment to change source hash");
 
         var task = new CompileMlangShaderSet()
         {
-            ShaderFiles = new[] { "model.mlang" },
+            //ShaderFiles = new[] { "model.mlang", "model2.mlang" },
+            ShaderFiles = new[]
+            {
+                
+                
+                @"C:\dev\zzio\zzre\shaders\model.mlang",
+
+                @"C:\dev\zzio\zzre\shaders\debug.mlang",
+                @"C:\dev\zzio\zzre\shaders\ui.mlang",
+                @"C:\dev\zzio\zzre\shaders\effect.mlang",
+            },
             EmbedShaderSource = true,
             OutputGeneratedSourceOnError = true,
             OutputPath = "model.shadercache",

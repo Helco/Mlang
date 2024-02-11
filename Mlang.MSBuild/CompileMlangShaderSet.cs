@@ -108,7 +108,7 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
                 var taskItem = ShaderFiles[i];
                 var name = Path.GetFileNameWithoutExtension(taskItem.ItemSpec);
                 var source = EmbedShaderSource ? File.ReadAllText(taskItem.ItemSpec) : null; // TODO: Reuse alread read source
-                setWriter.AddShader(shaderCompiler.ShaderInfo!, name, source, variantCounts[i++]);
+                setWriter.AddShader(shaderCompiler.ShaderInfo!, name, source, variantCounts[i]);
             }
 
             foreach (var variant in allVariants)

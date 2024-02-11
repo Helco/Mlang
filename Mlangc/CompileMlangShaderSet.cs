@@ -97,8 +97,10 @@ public class CompileMlangShaderSet
 
             using var setWriter = new ShaderSetFileWriter(
                 new FileStream(OutputPath, FileMode.Create, FileAccess.Write));
-            foreach (var (i, (shaderCompiler, taskItem)) in shaderCompilers.Zip(ShaderFiles, (a, b) => (a, b)).Indexed())
+            for (int i = 0; i < shaderCompilers.Length; i++)
             {
+                var shaderCompiler = shaderCompilers[i];
+                var taskItem = ShaderFiles[i];
                 var name = Path.GetFileNameWithoutExtension(taskItem);
                 var source = EmbedShaderSource ? File.ReadAllText(taskItem) : null; // TODO: Reuse alread read source
                 setWriter.AddShader(shaderCompiler.ShaderInfo!, name, source, variantCounts[i]);
