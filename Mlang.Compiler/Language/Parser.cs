@@ -352,6 +352,14 @@ internal partial class Parser
         return option;
     }
 
+    [Rule("VariantFilter: KwVariants (KwExclude | KwInclude) BlockCondition? Semicolon")]
+    private ASTVariantFilter VariantFilter(Tk _0, Tk op, ASTExpression? condition, Tk _1) => new ASTVariantFilter()
+    {
+        Range = op.Range,
+        Condition = condition,
+        Include = op.Kind == TokenKind.KwInclude
+    };
+
     [Rule("BlockCondition: KwIf ExprBrL Expression ExprBrR")]
     private ASTExpression BlockCondition(Tk _0, Tk _1, ASTExpression condition, Tk _2) => condition;
 
@@ -450,7 +458,7 @@ internal partial class Parser
     [Rule("StageItem: Statement | Function")]
     private ASTNode StageItem(ASTNode node) => node;
 
-    [Rule("GlobalBlock: Option | StageBlock | StorageBlock | PipelineBlock | Function")]
+    [Rule("GlobalBlock: Option | VariantFilter | StageBlock | StorageBlock | PipelineBlock | Function")]
     private ASTGlobalBlock GlobalBlock(ASTGlobalBlock node) => node;
 #endregion
 

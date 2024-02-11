@@ -4,6 +4,8 @@ option HasTexShift;
 option HasEnvMap;
 option Blend = IsOpaque, IsAlphaBlend, IsAdditiveBlend, IsAdditiveAlphaBlend;
 
+variants exclude if (IsInstanced && IsSkinned);
+
 attributes Geometry
 {
     float3 inPos;

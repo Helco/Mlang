@@ -153,3 +153,8 @@ internal class ASTOption : ASTGlobalBlock
     public static int GetBitCount(int valueCount) =>
         (int)Math.Ceiling(Math.Log(valueCount) / Math.Log(2));
 }
+
+internal class ASTVariantFilter : ASTConditionalGlobalBlock
+{
+    public bool Include { get; init; }
+}

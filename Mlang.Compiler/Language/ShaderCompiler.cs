@@ -56,11 +56,13 @@ public partial class ShaderCompiler : IDisposable
         allVariants ??= new(unit!.Blocks.OfType<ASTOption>());
     internal IReadOnlyCollection<IOptionValueSet> ProgramVariants =>
         programVariants ??= new(unit!.Blocks.OfType<ASTOption>(), onlyWithVariance: false);
-    internal IReadOnlyCollection<IOptionValueSet> ProgramInvariantsFor(IOptionValueSet valueSet)
+
+    internal IEnumerable<IOptionValueSet> ProgramInvariantsFor(IOptionValueSet valueSet)
     {
         var optionBits = valueSet.CollectOptionBits(unit!.Blocks.OfType<ASTOption>());
         var baseOptionBits = optionBits & ~ShaderInfo!.ProgramInvarianceMask;
-        return new VariantCollection(unit!.Blocks.OfType<ASTOption>(), onlyWithVariance: true, baseOptionBits);
+        return new VariantCollection(unit!.Blocks.OfType<ASTOption>(), onlyWithVariance: true, baseOptionBits)
+            .Where(IsInvariantIncluded);
     }
 
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
@@ -193,6 +195,23 @@ public partial class ShaderCompiler : IDisposable
         };
     }
 
+    private bool IsInvariantIncluded(IOptionValueSet optionValueSet)
+    {
+        if (unit == null)
+            return false;
+        optionValueSet = new FilteredOptionValueSet(unit!.Blocks.OfType<ASTOption>().ToArray(), optionValueSet);
+        bool result = true;
+        foreach (var filter in unit.Blocks.OfType<ASTVariantFilter>())
+        {
+            if (result != filter.Include && (
+                filter.Condition == null ||
+                !filter.Condition.TryOptionEvaluate(optionValueSet, out var value) ||
+                value != 0))
+                result = filter.Include;
+        }
+        return result;
+    }
+
     private void CheckVariantSpace()
     {
         var lastOption = unit?.Blocks.OfType<ASTOption>().LastOrDefault();
@@ -249,7 +268,7 @@ public partial class ShaderCompiler : IDisposable
             optionValueSet.AccessedOption = false;
             if (!block.Condition.TryOptionEvaluate(optionValueSet, out var value))
                 diagnostics.Add(DiagOptionConditionNotEvaluable(sourceFile, block.Condition.Range));
-            else if (!optionValueSet.AccessedOption)
+            else if (!optionValueSet.AccessedOption && block is not ASTVariantFilter)
                 diagnostics.Add(DiagOptionConditionIsConstant(sourceFile, block.Condition.Range, value));
         }
     }

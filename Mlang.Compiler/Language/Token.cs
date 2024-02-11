@@ -77,6 +77,9 @@ internal enum TokenKind
 
 #region Mlang specific keywords
     [Token("option")] KwOption,
+    [Token("variants")] KwVariants,
+    [Token("exclude")] KwExclude,
+    [Token("include")] KwInclude,
     [Token("attributes")] KwAttributes,
     [Token("instances")] KwInstances,
     [Token("varying")] KwVarying,

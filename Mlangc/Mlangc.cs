@@ -17,6 +17,10 @@ option HasTexShift;
 option HasEnvMap;
 option Blend = IsOpaque, IsAlphaBlend, IsAdditiveBlend, IsAdditiveAlphaBlend;
 
+variants exclude if (IsInstanced && IsSkinned);
+variants include if (IsInstanced && IsSkinned && HasEnvMap);
+variants exclude if (Blend == IsAlphaBlend);
+
 attributes Geometry
 {
     float3 inPos;
@@ -126,61 +130,24 @@ fragment
     static void Main(string[] args)
     {
         Console.WriteLine("Hello, World!");
-        var compiler = new ShaderCompiler("model.mlang", Shader)
+        Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath ?? ".") ?? ".";
+        File.WriteAllText("model.mlang", Shader);
+
+        var task = new CompileMlangShaderSet()
         {
-#if DEBUG
-            ThrowInternalErrors = true
-#endif
+            ShaderFiles = new[] { "model.mlang" },
+            EmbedShaderSource = true,
+            OutputGeneratedSourceOnError = true,
+            OutputPath = "model.shadercache",
+            RunInParallel = true
         };
-        Console.Write("Parsing...");
-        Console.WriteLine(compiler.ParseShader() ? "success" : "failure");
-        var presenter = new TextDiagnosticsPresenter(Console.Error);
-        var shaderInfo = compiler.ShaderInfo!;
-
-        foreach (var diagnostic in compiler.Diagnostics)
-            presenter.Present(diagnostic.ConvertToSynKit());
-        if (compiler.HasError)
+        if (!task.Execute())
             return;
-
-        object consoleLock = new();
-        using (var setWriter = new ShaderSetFileWriter(new FileStream("model.shadercache", FileMode.Create, FileAccess.Write)))
-        {
-            setWriter.AddShader(shaderInfo, "Model", Shader, compiler.AllVariants.Count);
-            Parallel.ForEach(compiler.ProgramVariants, new ParallelOptions()
-            {
-            }, (variantOptions, loopState) =>
-            {
-                using var variantCompiler = compiler.CreateVariantCompiler();
-                variantCompiler.OutputGeneratedSourceOnError = true;
-                var baseVariant = variantCompiler.CompileVariant(variantOptions);
-                if (variantCompiler.Diagnostics.Any())
-                {
-                    lock (consoleLock)
-                    {
-                        foreach (var diagnostic in variantCompiler.Diagnostics)
-                            presenter.Present(diagnostic.ConvertToSynKit());
-                        if (baseVariant == null)
-                        {
-                            loopState.Stop();
-                            return;
-                        }
-                    }
-                }
-                foreach (var invariantOptions in compiler.ProgramInvariantsFor(variantOptions))
-                {
-                    var invariant = variantCompiler.CompileVariant(invariantOptions, baseVariant);
-                    if (invariant == null)
-                        throw new ArgumentException("An invariant should always be compilable");
-                    lock(setWriter)
-                        setWriter.WriteVariant(invariant);
-                }
-            });
-        }
 
         var shaderSet = new FileShaderSet("model.shadercache");
         Console.WriteLine($"Loaded shader set with {shaderSet.TotalVariantCount} variants");
         shaderSet.LoadAll();
-        var modelShaderInfo = shaderSet.GetShaderInfo("Model");
+        var modelShaderInfo = shaderSet.GetShaderInfo("model");
         var modelVariant = shaderSet.GetVariant(new ShaderVariantKey(modelShaderInfo.SourceHash, 0u));
         foreach (var attr in modelVariant.VertexAttributes)
             Console.WriteLine($"{attr.Type.MlangName} {attr.Name}");

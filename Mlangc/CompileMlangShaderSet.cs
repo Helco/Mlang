@@ -2,26 +2,21 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Build.Framework;
-using Microsoft.Build.Utilities;
-using Mlang;
 using Mlang.Language;
-using Mlang.Model;
+using Yoakke.SynKit.Reporting.Present;
 using Yoakke.SynKit.Text;
-using static Mlang.MSBuild.MSBuildDiagnostics;
+using Mlang;
+using Mlang.Model;
+using System.Collections.Concurrent;
 
-namespace Mlang.MSBuild;
+namespace Mlangc;
 
-public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
+public class CompileMlangShaderSet
 {
-    [Required]
-    public ITaskItem[] ShaderFiles { get; set; } = Array.Empty<ITaskItem>();
+    public string[] ShaderFiles { get; set; } = Array.Empty<string>();
 
-    [Required]
     public string OutputPath { get; set; } = "output.shadercache";
 
     public bool OutputGeneratedSourceOnError { get; set; } = false;
@@ -32,7 +27,7 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
 
     private bool HasError => diagnostics.Any(d => d.Severity == Severity.Error || d.Severity == Severity.InternalError);
 
-    public override bool Execute()
+    public bool Execute()
     {
         var forOptions = new ParallelOptions()
         {
@@ -51,7 +46,7 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
                 shaderCompiler.ParseShader();
                 if (shaderCompiler.Diagnostics.Any())
                 {
-                    lock(diagnostics)
+                    lock (diagnostics)
                         diagnostics.AddRange(shaderCompiler.Diagnostics);
                     shaderCompiler.ClearDiagnostics();
                 }
@@ -89,7 +84,7 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
                     if (invariant == null)
                     {
                         lock (diagnostics)
-                            ReportDiagnosticBySeverity(Severity.InternalError, "MLANG0000", default, "Unexpectedly invariant could not be compiled", []);
+                            throw new Exception("Unexpectedly invariant could not be compiled");
                     }
                     else
                     {
@@ -102,26 +97,20 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
 
             using var setWriter = new ShaderSetFileWriter(
                 new FileStream(OutputPath, FileMode.Create, FileAccess.Write));
-            for (int i = 0; i < shaderCompilers.Length; i++)
+            foreach (var (i, (shaderCompiler, taskItem)) in shaderCompilers.Zip(ShaderFiles, (a, b) => (a, b)).Indexed())
             {
-                var shaderCompiler = shaderCompilers[i];
-                var taskItem = ShaderFiles[i];
-                var name = Path.GetFileNameWithoutExtension(taskItem.ItemSpec);
-                var source = EmbedShaderSource ? File.ReadAllText(taskItem.ItemSpec) : null; // TODO: Reuse alread read source
-                setWriter.AddShader(shaderCompiler.ShaderInfo!, name, source, variantCounts[i++]);
+                var name = Path.GetFileNameWithoutExtension(taskItem);
+                var source = EmbedShaderSource ? File.ReadAllText(taskItem) : null; // TODO: Reuse alread read source
+                setWriter.AddShader(shaderCompiler.ShaderInfo!, name, source, variantCounts[i]);
             }
 
             foreach (var variant in allVariants)
                 setWriter.WriteVariant(variant);
 
             wasSuccessful = !HasError;
-            var totalPrograms = shaderCompilers.Sum(c => c.ProgramVariants.Count);
-            var totalVariants = shaderCompilers.Sum(c => c.AllVariants.Count);
-            ReportDiagnosticBySeverity(Severity.Info, "MLANG0000", default,
-                "Compiled {0}/{2} and assembled {1}/{3} shader variants in total",
-                [totalCompiled, allVariants.Count, totalPrograms, totalVariants]);
+            Console.WriteLine($"Compiled {totalCompiled} and assembled {allVariants.Count} shader variants in total");
         }
-        catch(IOException e)
+        catch (IOException e)
         {
             diagnostics.Add(DiagShaderSetIOError(OutputPath, e.Message));
         }
@@ -137,15 +126,19 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
         return wasSuccessful;
     }
 
-    private ShaderCompiler CreateShaderCompiler(ITaskItem item)
+    private ShaderCompiler CreateShaderCompiler(string item)
     {
         try
         {
-            return new ShaderCompiler(item.ItemSpec, new FileStream(item.ItemSpec, FileMode.Open, FileAccess.Read));
+            return new ShaderCompiler(item, new FileStream(item, FileMode.Open, FileAccess.Read))
+#if DEBUG
+            { ThrowInternalErrors = true }
+#endif
+            ;
         }
-        catch(IOException e)
+        catch (IOException e)
         {
-            diagnostics.Add(DiagShaderIOError(item.ItemSpec, e.Message));
+            diagnostics.Add(DiagShaderIOError(item, e.Message));
         }
         return null!;
     }
@@ -176,80 +169,31 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
         }
     }
 
+    private TextDiagnosticsPresenter Presenter = new TextDiagnosticsPresenter(Console.Error);
     private void ReportDiagnostic(Diagnostic diagnostic)
     {
-        var code = diagnostic.Type.Code;
-        if (!code.StartsWith("mlang", StringComparison.InvariantCultureIgnoreCase))
-            code = "MLANG-" + code;
-        MSBuildDiagnosticLocation location = default;
-        if (diagnostic.SourceInfos.Any())
-            location = new(diagnostic.SourceInfos.First());
-        var messageArgs = diagnostic.MessageParams.Select(p => p ?? "<null>").ToArray();
-        ReportDiagnosticBySeverity(diagnostic.Severity, code, location, diagnostic.Type.Message, messageArgs);
-
-        for (int i = 1; i < diagnostic.SourceInfos.Count; i++)
-        {
-            var sourceInfoMessage = "see also:";
-            if (i < diagnostic.Type.SourceInfoMessages.Count)
-                sourceInfoMessage = $"see also {diagnostic.Type.SourceInfoMessages[i]}: ";
-            ReportDiagnosticBySeverity(Severity.Info, "MLANG-SEEALSO", new(diagnostic.SourceInfos[i]), sourceInfoMessage, messageArgs);
-        }
-
-        if (diagnostic.Type.FootNote != null)
-            ReportDiagnosticBySeverity(Severity.Info, "MLANG-FOOTNOTE", location: default, diagnostic.Type.FootNote, messageArgs);
+        Presenter.Present(diagnostic.ConvertToSynKit());
     }
 
-    private void ReportDiagnosticBySeverity(
-        Severity severity,
-        string code,
-        MSBuildDiagnosticLocation location,
-        string message,
-        object[] messageArgs)
+    public static readonly DiagnosticCategory CategoryInternal = new("MSBUILD");
+
+    public static readonly DiagnosticType TypeShaderIOError = CategoryInternal.Create(
+        Severity.Error, "Could not open file: {0}");
+
+    public static Diagnostic DiagShaderIOError(string fileName, string errorMessage)
     {
-        switch(severity)
-        {
-            case Severity.Error:
-                Log.LogError(
-                    subcategory: null,
-                    code,
-                    helpKeyword: null,
-                    location.file,
-                    location.lineNumber, location.columnNumber,
-                    location.endLineNumber, location.endColumnNumber,
-                    message, messageArgs);
-                break;
-            case Severity.InternalError:
-                Log.LogCriticalMessage(
-                    subcategory: null,
-                    code,
-                    helpKeyword: null,
-                    location.file,
-                    location.lineNumber, location.columnNumber,
-                    location.endLineNumber, location.endColumnNumber,
-                    message, messageArgs);
-                break;
-            case Severity.Warning:
-                Log.LogWarning(
-                    subcategory: null,
-                    code,
-                    helpKeyword: null,
-                    location.file,
-                    location.lineNumber, location.columnNumber,
-                    location.endLineNumber, location.endColumnNumber,
-                    message, messageArgs);
-                break;
-            case Severity.Info:
-            default:
-                Log.LogMessage(
-                    subcategory: null,
-                    code,
-                    helpKeyword: null,
-                    location.file,
-                    location.lineNumber, location.columnNumber,
-                    location.endLineNumber, location.endColumnNumber,
-                    MessageImportance.High,
-                    message, messageArgs);
-                break;
-        }
+        var sourceFile = new SourceFile(fileName, TextReader.Null);
+        var sourceInfo = new Location(sourceFile, default);
+        return TypeShaderIOError.Create([errorMessage], [sourceInfo]);
+    }
+
+    public static readonly DiagnosticType TypeShaderSetIOError = CategoryInternal.Create(
+        Severity.Error, "Failed to write shader set: {0}");
+
+    public static Diagnostic DiagShaderSetIOError(string fileName, string errorMessage)
+    {
+        var sourceFile = new SourceFile(fileName, TextReader.Null);
+        var sourceInfo = new Location(sourceFile, default);
+        return TypeShaderIOError.Create([errorMessage], [sourceInfo]);
     }
 }
