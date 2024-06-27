@@ -114,7 +114,7 @@ internal class MlangOutputVisitor : IASTVisitor
 
     private bool Write(ASTMemberAccess mem)
     {
-        mem.Parent.Visit(this);
+        WriteBracketed(mem.Parent, mem.Parent.Precedence > mem.Precedence);
         Writer.Write('.');
         Writer.Write(mem.Member);
         return false;
@@ -144,7 +144,8 @@ internal class MlangOutputVisitor : IASTVisitor
             TokenKind.BitNegate => "~",
             _ => throw new InvalidOperationException("Invalid operator in UnaryExpression")
         });
-        return true;
+        WriteBracketed(un.Operand, un.Operand.Precedence > un.Precedence);
+        return false;
     }
 
     private bool Write(ASTBinaryExpression bin)

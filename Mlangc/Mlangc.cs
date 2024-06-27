@@ -106,7 +106,7 @@ vertex
     vec2 uv = inUV;
     if (HasEnvMap)
     {
-        float3 incident = vec3(world[3] + vec4(inPos, 0) + view[3] + view[2]);
+        float3 incident = (world[3] + vec4(inPos, 0) + view[3] + view[2]).xyz;
         uv = vec2(-reflect(incident, inNormal));
     }
     if (HasTexShift)
@@ -136,8 +136,8 @@ fragment
 
         var task = new CompileMlangShaderSet()
         {
-            //ShaderFiles = new[] { "model.mlang", "model2.mlang" },
-            ShaderFiles = new[]
+            ShaderFiles = new[] { "model.mlang", "model2.mlang" },
+            /*ShaderFiles = new[]
             {
                 
                 
@@ -146,7 +146,7 @@ fragment
                 @"C:\dev\zzio\zzre\shaders\debug.mlang",
                 @"C:\dev\zzio\zzre\shaders\ui.mlang",
                 @"C:\dev\zzio\zzre\shaders\effect.mlang",
-            },
+            },*/
             EmbedShaderSource = true,
             OutputGeneratedSourceOnError = true,
             OutputPath = "model.shadercache",
