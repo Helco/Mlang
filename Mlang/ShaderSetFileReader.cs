@@ -19,7 +19,7 @@ internal class ShaderSetFileReader : IDisposable
 
     public IReadOnlyList<ShaderSetFile.ShaderHeader> Shaders => shaders;
     public Span<ShaderSetFile.VariantHeader> Variants =>
-        MemoryMarshal.Cast<byte, ShaderSetFile.VariantHeader>(variantHeaders);
+        MemoryMarshal.Cast<byte, ShaderSetFile.VariantHeader>(variantHeaders.AsSpan());
 
     private ShaderSetFileReader(bool _, Stream stream, bool ownsStream)
     {
