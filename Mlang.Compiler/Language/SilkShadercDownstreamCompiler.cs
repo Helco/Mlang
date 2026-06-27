@@ -12,6 +12,7 @@ using ShadercCompiler = Silk.NET.Shaderc.Compiler;
 using ShadercCompileOptions = Silk.NET.Shaderc.CompileOptions;
 using ShadercCompilationResult = Silk.NET.Shaderc.CompilationResult;
 using TextRange = Yoakke.SynKit.Text.Range;
+using System.Runtime.InteropServices;
 
 namespace Mlang.Language;
 
@@ -170,8 +171,28 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
             var pathResolver = new DefaultPathResolver();
             pathResolver.Resolvers.Insert(0, name =>
             {
-                var shadercPath = Path.Combine(Path.GetDirectoryName(shadercAssembly.Location)!, name) ;
-                return new[] { shadercPath };
+                var shadercDir = Path.GetDirectoryName(shadercAssembly.Location)!;
+                var shadercPath = Path.Combine(shadercDir, name) ;
+
+                // DependencyContext.Default is sometimes null during build, this messes up the runtimes resolver of silk
+                // we have to fake that ourselves...
+                var os =
+                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
+                    : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux"
+                    : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx"
+                    : null;
+                var arch = RuntimeInformation.ProcessArchitecture switch
+                {
+                    Architecture.X86 => "x86",
+                    Architecture.X64 => "x64",
+                    Architecture.Arm => "arm",
+                    Architecture.Arm64 => "arm64",
+                    _ => null
+                };
+
+                return os is null || arch is null
+                    ? [shadercPath]
+                    : [shadercPath, Path.Combine(shadercDir, "runtimes", $"{os}-{arch}", "native", name)];
             });
             var libraryLoader = LibraryLoader.GetPlatformDefaultLoader();
             foreach (var name in shadercNameContainer.GetLibraryNames())
