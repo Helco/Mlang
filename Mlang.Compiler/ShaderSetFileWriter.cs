@@ -23,7 +23,7 @@ public class ShaderSetFileWriter : IDisposable
     private bool finished;
 
     private Span<ShaderSetFile.VariantHeader> Variants =>
-        MemoryMarshal.Cast<byte, ShaderSetFile.VariantHeader>(variantBytes);
+        MemoryMarshal.Cast<byte, ShaderSetFile.VariantHeader>(variantBytes.AsSpan());
 
     public ShaderSetFileWriter(Stream stream, bool leaveOpen = false)
     {
