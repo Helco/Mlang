@@ -154,7 +154,7 @@ public class CompileMlangShaderSet : Microsoft.Build.Utilities.Task
 
         public MSBuildDiagnosticLocation(Location location)
         {
-            file = location.File.Path;
+            file = location.File?.Path;
             if (location.Range.Start == location.Range.End)
             {
                 if (location.Range.Start != default)
