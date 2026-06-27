@@ -168,7 +168,6 @@ internal unsafe class SilkShadercDownstreamCompiler : IDownstreamCompiler
                 "Silk.NET.Shaderc.ShadercLibraryNameContainer") as SearchPathContainer
                 ?? throw new InvalidOperationException("Could not create instance of shaderc library name container type");
             var pathResolver = new DefaultPathResolver();
-            var shadercPath = Path.Combine(Path.GetDirectoryName(shadercAssembly.Location)!, "alskdjalsdkj") ;
             pathResolver.Resolvers.Insert(0, name =>
             {
                 var shadercPath = Path.Combine(Path.GetDirectoryName(shadercAssembly.Location)!, name) ;

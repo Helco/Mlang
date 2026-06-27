@@ -19,14 +19,16 @@
     <BuildOutputTargetFolder>tasks</BuildOutputTargetFolder>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="build\Mlang.MSBuild.props" PackagePath="build/"/>
-    <Content Include="build\Mlang.MSBuild.targets" PackagePath="build/"/>
-    <Content Include="_._" PackagePath="lib/netstandard2.0/_._"/>
+    <Content Include="build\Mlang.MSBuild.props" PackagePath="build/" />
+    <Content Include="build\Mlang.MSBuild.targets" PackagePath="build/" />
+    <Content Include="_._" PackagePath="lib/netstandard2.0/_._" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Build.Utilities.Core" PrivateAssets="all" ExcludeAssets="Runtime" />
-    <PackageReference Include="Silk.NET.Shaderc.Native" PrivateAssets="all" GeneratePathProperty="true"/>
+    <PackageReference Include="Microsoft.Build.Utilities.Core" PrivateAssets="all" ExcludeAssets="Runtime">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Silk.NET.Shaderc.Native" PrivateAssets="all" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,12 +50,9 @@
 
   <Target Name="CopyNativeBinariesToOutput" AfterTargets="CoreBuild">
     <ItemGroup>
-      <NativeBinaries Include="$(PkgSilk_NET_Shaderc_Native)/runtimes/**"/>
+      <NativeBinaries Include="$(PkgSilk_NET_Shaderc_Native)/runtimes/**" />
     </ItemGroup>
-    <Copy
-      SourceFiles="@(NativeBinaries)"
-      DestinationFolder="$(OutDir)runtimes/%(RecursiveDir)"
-      SkipUnchangedFiles="true"/>
+    <Copy SourceFiles="@(NativeBinaries)" DestinationFolder="$(OutDir)runtimes/%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

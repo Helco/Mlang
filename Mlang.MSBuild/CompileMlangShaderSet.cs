@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Build.Framework;
-using Microsoft.Build.Utilities;
 using Mlang;
 using Mlang.Language;
 using Mlang.Model;
